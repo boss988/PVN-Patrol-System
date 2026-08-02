@@ -11,6 +11,10 @@ from notification.models import EmailGroup   # ← 新增这一行
 from datetime import date
 import json
 from django.http import JsonResponse
+from .issues_models import PatrolIssue, PatrolCategory
+from django.http import HttpResponse, JsonResponse
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
 
 class IssueForm(forms.ModelForm):
     class Meta:
@@ -34,8 +38,16 @@ PATROL_EDIT_DELETE_USERS = [
     'V25018772',
     'perry_chen',
     # 以后可以继续往这里加
-]
 
+]
+# 公屏通知权限白名单（可发布/关闭跑马灯公屏信息）
+MARQUEE_NOTICE_USERS = [
+    'V25020512',
+    's20038978',
+    'V25018772',
+    'perry_chen',
+    # 以后要加账号，直接写在这里
+]
 
 
 # ==================== 新增：跑马灯日志辅助函数（只在新增记录时使用） ====================
@@ -89,64 +101,6 @@ def issues_list(request, equipment_pk):
     return render(request, 'issues/issues_list.html', {'issues': issues, 'equipment': equipment})
 
 
-# @login_required
-# def import_issues(request):
-#     """
-#     最终版（已修复 datetime 未定义）
-#     """
-#     if request.method == 'POST' and 'excel_file' in request.FILES:
-#         excel_file = request.FILES['excel_file']
-#         try:
-#             df = pd.read_excel(excel_file, sheet_name="LapTop BB Auto Downtime")
-#             print("=== 开始导入调试 ===")
-#             print(f"总行数: {len(df)}")
-#             count = 0
-#
-#             for idx, row in df.iterrows():
-#                 equip_name = str(row.get('設備', '')).strip()
-#                 raw_date = str(row.get('日期', '')).strip()
-#
-#                 if not equip_name or raw_date in ['日期', 'nan', '', 'NaN']:
-#                     continue
-#
-#                 # 日期解析
-#                 clean_date = raw_date.split('N')[0].split('D')[0].strip()
-#                 try:
-#                     occur_date = pd.to_datetime(f"2025-{clean_date}", format='%Y-%m/%d').date()
-#                 except:
-#                     continue
-#
-#                 equipment = Equipment.objects.filter(name__icontains=equip_name).first()
-#                 if not equipment:
-#                     continue
-#
-#                 time_str = str(row.get('異常時間\n(min)', row.get('異常時間(min)', '0'))).strip()
-#                 minutes = float(time_str) if time_str.replace('.', '', 1).isdigit() else 0
-#
-#                 EquipmentIssue.objects.create(
-#                     equipment=equipment,
-#                     issue_code=f"EXCEL-{count + 1}",
-#                     desc=str(row.get('異常現象及原因', '')),
-#                     occur_date=occur_date,
-#                     severity=3 if minutes > 60 else 2,
-#                     root_cause=str(row.get('處理方法', '')),
-#                     abnormal_work_time=int(minutes),
-#                     work_time_type=str(row.get('异常工时甄别（硬件/软件/其它)', '')),
-#                     can_import_maintenance=str(row.get('可否导入保养', '')) == 'OK',
-#                     risk_id=f"RISK-{datetime.now().strftime('%Y%m%d')}-{count + 1}",
-#                     source_excel=excel_file.name
-#                 )
-#                 count += 1
-#
-#             return render(request, 'issues/import_form.html', {
-#                 'success': f'✅ 成功导入 {count} 条完整问题记录！'
-#             })
-#         except Exception as e:
-#             return render(request, 'issues/import_form.html', {'error': f'导入失败：{str(e)}'})
-#     return render(request, 'issues/import_form.html', {})
-#
-#
-
 
 @login_required
 def patrol_list(request):
@@ -157,6 +111,7 @@ def patrol_list(request):
     end_date = request.GET.get('end_date')
     supervisor = request.GET.get('supervisor', '').strip()
     status = request.GET.get('status', '').strip()
+    category = request.GET.get('category', '').strip()  # ← 新增类别大饼跳转用
 
     # ==================== 2. 构建查询 ====================
     issues = PatrolIssue.objects.all().order_by('-date')
@@ -169,6 +124,14 @@ def patrol_list(request):
     # 新增：主管筛选（支持模糊匹配，兼容各种写法）
     if supervisor:
         issues = issues.filter(supervisor__icontains=supervisor)
+    if status:
+        issues = issues.filter(status__iexact=status)
+    if category:
+        # 支持按类别名称筛选（也兼容「未分类」）
+        if category == '未分类':
+            issues = issues.filter(category__isnull=True)
+        else:
+            issues = issues.filter(category__name=category)
 
     # 新增：状态筛选
     if status:
@@ -192,6 +155,7 @@ def patrol_list(request):
         'selected_supervisor': supervisor,
         'selected_status': status,
         'patrol_edit_users': PATROL_EDIT_DELETE_USERS,  # 保持之前的
+        'selected_category': category, # 类别大饼跳用
     })
 
 
@@ -202,6 +166,9 @@ def patrol_create(request):
         photos = request.FILES.getlist('photos')   # 获取所有上传的文件
         photo_urls = []
 
+        # 获取用户选择的类别ID
+        category_id = request.POST.get('category')
+
         issue = PatrolIssue.objects.create(
             sequence=request.POST.get('sequence'),
             date=request.POST.get('date'),
@@ -211,6 +178,7 @@ def patrol_create(request):
             op_responsible=request.POST.get('op_responsible'),
             supervisor=request.POST.get('supervisor'),
             status=request.POST.get('status'),
+            category_id=category_id if category_id else None,  # ← 新增这一行
         )
 
         # 保存每张照片到磁盘，并记录URL
@@ -230,9 +198,12 @@ def patrol_create(request):
         messages.success(request, f'✅ 点检记录已保存！共上传 {len(photos)} 张照片')
         return redirect('issues:patrol_list')
 
-    # return render(request, 'issues/patrol_form.html')
+    # 获取所有启用的类别，按排序显示
+    categories = PatrolCategory.objects.filter(is_active=True).order_by('order')
+
     return render(request, 'issues/patrol_form.html', {
-        'supervisor_choices': SUPERVISOR_CHOICES  # ← 新增这一行
+        'supervisor_choices': SUPERVISOR_CHOICES,
+        'categories': categories,  # ← 新增
     })
 
 
@@ -272,17 +243,22 @@ def patrol_edit(request, pk):
         issue.op_responsible = request.POST.get('op_responsible')
         issue.supervisor = request.POST.get('supervisor')
         issue.status = request.POST.get('status')
+        # 更新类别
+        category_id = request.POST.get('category')
+        issue.category_id = category_id if category_id else None
 
         issue.save()
 
         messages.success(request, f'✅ 编辑成功！已删除 {len(delete_list) if photos_to_delete else 0} 张照片')
         return redirect('issues:patrol_list')
 
-    # return render(request, 'issues/patrol_form.html', {'issue': issue, 'edit': True})
+    categories = PatrolCategory.objects.filter(is_active=True).order_by('order')
+
     return render(request, 'issues/patrol_form.html', {
         'issue': issue,
         'edit': True,
-        'supervisor_choices': SUPERVISOR_CHOICES   # ← 新增这一行
+        'supervisor_choices': SUPERVISOR_CHOICES,
+        'categories': categories,  # ← 新增
     })
 
 
@@ -635,3 +611,80 @@ def patrol_export(request):
 
     wb.save(response)
     return response
+
+# ==================== 公屏通知管理 ====================
+@login_required
+def marquee_notice_manage(request):
+    """
+    公屏通知发布/关闭页面
+    只有白名单用户可以访问
+    """
+    from .issues_models import MarqueeNotice
+
+    # 权限检查
+    if request.user.username not in MARQUEE_NOTICE_USERS:
+        messages.error(request, '你没有权限管理公屏通知！')
+        return redirect('issues:patrol_list')
+
+    # 获取当前启用的通知（最多一条）
+    current_notice = MarqueeNotice.objects.filter(is_active=True).order_by('-created_at').first()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'publish':
+            content = request.POST.get('content', '').strip()
+            if not content:
+                messages.error(request, '通知内容不能为空！')
+            else:
+                # 先把旧的全部关闭
+                MarqueeNotice.objects.filter(is_active=True).update(is_active=False)
+                # 创建新通知
+                MarqueeNotice.objects.create(
+                    content=content,
+                    is_active=True,
+                    created_by=request.user.username
+                )
+                messages.success(request, f'公屏通知已发布：{content}')
+                return redirect('issues:marquee_notice_manage')
+
+        elif action == 'close':
+            MarqueeNotice.objects.filter(is_active=True).update(is_active=False)
+            messages.success(request, '公屏通知已关闭，跑马灯恢复显示点检日志')
+            return redirect('issues:marquee_notice_manage')
+
+    return render(request, 'issues/marquee_notice.html', {
+        'current_notice': current_notice,
+        'marquee_users': MARQUEE_NOTICE_USERS,
+    })
+
+
+@login_required
+def marquee_content_api(request):
+    """
+    跑马灯内容接口（方案B：公屏优先，没有才显示点检日志）
+    返回纯文本，给 base.html 的 JS 调用
+    """
+    from .issues_models import MarqueeNotice
+    from django.conf import settings
+    import os
+
+    # 1. 优先查启用中的公屏通知
+    notice = MarqueeNotice.objects.filter(is_active=True).order_by('-created_at').first()
+    if notice:
+        time_str = notice.created_at.strftime('%m-%d %H:%M')
+        msg = f"📢 {notice.content}　|　发布人：{notice.created_by}　|　时间：{time_str}"
+        return HttpResponse(msg, content_type='text/plain; charset=utf-8')
+
+    # 2. 没有公屏通知 → 读原来的点检日志
+    log_path = os.path.join(settings.BASE_DIR, 'static', 'maintenance_log.txt')
+    try:
+        if os.path.exists(log_path):
+            with open(log_path, 'r', encoding='utf-8') as f:
+                lines = [line.strip() for line in f if line.strip()]
+            if lines:
+                return HttpResponse('🚨 ' + lines[-1], content_type='text/plain; charset=utf-8')
+    except Exception:
+        pass
+
+    return HttpResponse('🚨 系统运行正常 | 等待最新信息...', content_type='text/plain; charset=utf-8')

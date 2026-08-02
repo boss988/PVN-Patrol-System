@@ -38,6 +38,14 @@
 
 
 
+
+
+
+
+
+
+
+
 </style>
 
 {% block content %}
@@ -295,10 +303,10 @@
                     <span class="fw-bold">点检各主管问题点 summary</span>
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-primary active" id="btnDaily"
-                                onclick="switchChartMode('daily')">按天显示
+                                onclick="switchChartMode('daily')">按天显示Theo ngày
                         </button>
                         <button type="button" class="btn btn-outline-primary" id="btnWeekly"
-                                onclick="switchChartMode('weekly')">按周显示
+                                onclick="switchChartMode('weekly')">按周显示Theo tuần
                         </button>
                     </div>
                 </div>
@@ -309,7 +317,15 @@
         </div>
         <div class="col-12 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header fw-bold">点检记录的问题点数量折线图</div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">点检记录的问题点数量折线图</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="btnTotalDaily"
+                                onclick="switchTotalMode('daily')">按天显示Theo ngày</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnTotalWeekly"
+                                onclick="switchTotalMode('weekly')">按周显示Theo tuần</button>
+                    </div>
+                </div>
                 <div class="card-body">
                     <canvas id="chartDailyTotal" height="380"></canvas>
                 </div>
@@ -353,6 +369,37 @@
             </div>
         </div>
 
+        <!-- ==================== 点检类别占比饼图（支持按天/按周） ==================== -->
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">点检类别占比Tỷ lệ loại kiểm tra</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary" id="btnCatToday"
+                                onclick="switchCategoryMode('today')">今日Hôm nay
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnCatWeek"
+                                onclick="switchCategoryMode('week')">本周Tuần này
+                        </button>
+                        <button type="button" class="btn btn-outline-primary active" id="btnCatRange"
+                                onclick="switchCategoryMode('range')">选定时间Theo khoảng
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-5 text-center">
+                            <!-- 把饼图改小 -->
+                            <canvas id="chartCategory" width="580" height="580"></canvas>
+                        </div>
+                        <div class="col-md-7">
+                            <div id="categoryTable" class="table-responsive"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -364,6 +411,17 @@
     let currentChartMode = 'daily';          // daily 或 weekly
     let lastSupervisorDaily = null;          // 缓存每日数据
     let lastDates = null;                    // 缓存日期
+    let currentTotalMode = 'daily';   // 每日总数图表的模式
+
+    // ==================== 切换「问题点数量折线图」的 按天 / 按周 ====================
+function switchTotalMode(mode) {
+    currentTotalMode = mode;
+    document.getElementById('btnTotalDaily').classList.toggle('active', mode === 'daily');
+    document.getElementById('btnTotalWeekly').classList.toggle('active', mode === 'weekly');
+
+    // 重新画图
+    updateChartsFromTable();
+}
 
     // ==================== 函数1：名称规范化 ====================
     function normalizeSupervisorName(name) {
@@ -439,119 +497,95 @@
         return monday.toISOString().slice(0, 10); // YYYY-MM-DD
     }
 
-    // ==================== 函数：绘制主管折线图（支持按天 / 按自然周） ====================
-    function drawSupervisorChart(dates, supervisorDaily, mode) {
-        if (supervisorChart) {
-            supervisorChart.destroy();
-        }
-
-        let labels = [];
-        let finalData = {};
-
-        if (mode === 'weekly') {
-            // ========== 按自然周（周一~周日）聚合 ==========
-            const weekMap = {}; // mondayStr → {label, indices: []}
-
-            dates.forEach(function(dateStr, index) {
-                const d = parseDateLabel(dateStr);
-                if (!d) return;
-
-                const mondayStr = getMondayOfWeek(d);
- if (!weekMap[mondayStr]) {
-    const monday = new Date(mondayStr);
-
-    // 计算 ISO 周数（W01 ~ W53）
-    function getISOWeek(date) {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        // 设置到周四（ISO 周的参考日）
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        return weekNo;
+// ==================== 函数：绘制主管折线图（按天用表格 / 按周用最近8周真实数据） ====================
+function drawSupervisorChart(dates, supervisorDaily, mode) {
+    if (supervisorChart) {
+        supervisorChart.destroy();
     }
 
-    const weekNum = getISOWeek(monday);
-    const weekLabel = 'W' + String(weekNum).padStart(2, '0');   // 显示成 W28、W29...
+    let labels = [];
+    let finalData = {};
 
-    weekMap[mondayStr] = {
-        label: weekLabel,
-        indices: []
-    };
-}
-                weekMap[mondayStr].indices.push(index);
-            });
+    if (mode === 'weekly') {
+        // ========== 按周：使用后端统计的最近8周真实数据 ==========
+        const weeklyData = {{ weekly_chart_data|safe }} || null;
 
-            const sortedMondays = Object.keys(weekMap).sort();
-            labels = sortedMondays.map(m => weekMap[m].label);
-
-            Object.keys(supervisorDaily).forEach(function(name) {
-                finalData[name] = sortedMondays.map(function(mondayStr) {
-                    let sum = 0;
-                    weekMap[mondayStr].indices.forEach(function(i) {
-                        sum += (supervisorDaily[name][i] || 0);
-                    });
-                    return sum;
-                });
+        if (weeklyData && weeklyData.labels && weeklyData.labels.length > 0) {
+            labels = weeklyData.labels;
+            finalData = {};
+            weeklyData.datasets.forEach(function(ds) {
+                finalData[ds.label] = ds.data;
             });
         } else {
-            // 按天
-            labels = dates;
-            finalData = supervisorDaily;
+            // 没有后端数据时的兜底（理论上不会走到这里）
+            labels = [];
+            finalData = {};
+            console.warn("[DEBUG] 没有收到 weekly_chart_data");
         }
-
-        // 创建数据集
-        const datasets = [];
-        let colorIndex = 0;
-        const colors = ["#198754", "#dc3545", "#ffc107", "#6f42c1", "#0d6efd", "#fd7e14"];
-
-        Object.keys(finalData).forEach(function(name) {
-            datasets.push({
-                label: name,
-                data: finalData[name],
-                borderColor: colors[colorIndex % colors.length],
-                borderWidth: 3,
-                tension: 0.3,
-                pointRadius: 5,
-                pointBackgroundColor: colors[colorIndex % colors.length]
-            });
-            colorIndex++;
-        });
-
-        supervisorChart = new Chart(document.getElementById("chartSupervisor"), {
-            type: "line",
-            data: {
-                labels: labels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { position: 'top' } }
-            },
-            plugins: [{
-                id: 'showNumbers',
-                afterDatasetsDraw: function(chart) {
-                    const ctx = chart.ctx;
-                    ctx.font = 'bold 13px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-
-                    chart.data.datasets.forEach(function(dataset, datasetIndex) {
-                        const meta = chart.getDatasetMeta(datasetIndex);
-                        ctx.fillStyle = dataset.borderColor;
-                        dataset.data.forEach(function(value, index) {
-                            if (value !== undefined && value !== null && value !== 0) {
-                                const x = meta.data[index].x;
-                                const y = meta.data[index].y - 10;
-                                ctx.fillText(value, x, y);
-                            }
-                        });
-                    });
-                }
-            }]
-        });
+    } else {
+        // ========== 按天：继续使用表格里的数据 ==========
+        labels = dates;
+        finalData = supervisorDaily;
     }
+
+    // 创建数据集
+    const datasets = [];
+    let colorIndex = 0;
+    const colors = ["#198754", "#dc3545", "#ffc107", "#6f42c1", "#0d6efd", "#fd7e14"];
+
+    Object.keys(finalData).forEach(function(name) {
+        datasets.push({
+            label: name,
+            data: finalData[name],
+            borderColor: colors[colorIndex % colors.length],
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: colors[colorIndex % colors.length]
+        });
+        colorIndex++;
+    });
+
+    supervisorChart = new Chart(document.getElementById("chartSupervisor"), {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            },
+            plugins: {
+                legend: { position: 'top' }
+            }
+        },
+        plugins: [{
+            id: 'showNumbers',
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                ctx.font = 'bold 13px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+
+                chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    ctx.fillStyle = dataset.borderColor;
+
+                    dataset.data.forEach(function(value, index) {
+                        if (value !== undefined && value !== null && value !== 0) {
+                            const x = meta.data[index].x;
+                            const y = meta.data[index].y - 10;
+                            ctx.fillText(value, x, y);
+                        }
+                    });
+                });
+            }
+        }]
+    });
+}
 
     // ==================== 切换 按天 / 按周 ====================
     function switchChartMode(mode) {
@@ -601,14 +635,34 @@
         });
 
         // ===== 每日问题总数折线图 =====
+         // ===== 问题点数量折线图（支持按天 / 按周） =====
         if (dailyChart) dailyChart.destroy();
+
+        let totalLabels = dates;
+        let totalData = dailyTotal;
+
+        if (currentTotalMode === 'weekly') {
+            // 按周：复用后端 8 周数据，把各主管数量加总
+            const weeklyData = {{ weekly_chart_data|safe }} || null;
+            if (weeklyData && weeklyData.labels) {
+                totalLabels = weeklyData.labels;
+                totalData = weeklyData.labels.map(function(_, idx) {
+                    let sum = 0;
+                    weeklyData.datasets.forEach(function(ds) {
+                        sum += (ds.data[idx] || 0);
+                    });
+                    return sum;
+                });
+            }
+        }
+
         dailyChart = new Chart(document.getElementById("chartDailyTotal"), {
             type: "line",
             data: {
-                labels: dates,
+                labels: totalLabels,
                 datasets: [{
-                    label: "每日问题总数",
-                    data: dailyTotal,
+                    label: currentTotalMode === 'weekly' ? "每周问题总数" : "每日问题总数",
+                    data: totalData,
                     borderColor: "#0d6efd",
                     borderWidth: 4,
                     tension: 0.3,
@@ -795,6 +849,116 @@ window[sup.id + "Chart"] = new Chart(document.getElementById(sup.id), {
         });
     }
 
+       // ==================== 6点检类别占比（今日 / 本周 / 选定时间） ====================
+    let categoryChart = null;
+    let currentCategoryMode = 'range';   // 默认显示选定时间范围
+
+    function drawCategoryChart(mode) {
+        mode = mode || currentCategoryMode;
+
+        let stats = [];
+        if (mode === 'today') {
+            stats = {{ category_stats_today|safe }} || [];
+        } else if (mode === 'week') {
+            stats = {{ category_stats_week|safe }} || [];
+        } else {
+            stats = {{ category_stats|safe }} || [];   // 选定时间范围
+        }
+
+        if (categoryChart) {
+            categoryChart.destroy();
+        }
+
+        if (!stats.length) {
+            document.getElementById('categoryTable').innerHTML = '<p class="text-muted">暂无数据Không có dữ liệu</p>';
+            return;
+        }
+
+        const labels = stats.map(item => item.name);
+        const data = stats.map(item => item.count);
+        const total = data.reduce((a, b) => a + b, 0);
+        const colors = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6c757d'];
+
+        categoryChart = new Chart(document.getElementById('chartCategory'), {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderWidth: 2
+                }]
+            },
+    options: {
+        responsive: false,
+        plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 } } },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const percent = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                        return `${ctx.label}: ${ctx.raw} (${percent}%)`;
+                    }
+                }
+            }
+        },
+        // ==================== 点击饼图某块 → 跳转到对应类别的记录 ====================
+        onClick: function(evt, elements) {
+            if (elements.length > 0) {
+                const index = elements[0].index;          // 点中了第几块
+                const categoryName = labels[index];       // 拿到类别名称
+                // 跳转到点检列表，并带上类别筛选参数
+                const url = `/patrol/?category=${encodeURIComponent(categoryName)}`;
+                window.location.href = url;
+            }
+        }
+    },
+            plugins: [{
+                id: 'categoryPercent',
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach(function(dataset, i) {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach(function(el, index) {
+                            const value = dataset.data[index];
+                            const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            if (percent < 4) return;
+                            const pos = el.tooltipPosition();
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(percent + '%', pos.x, pos.y);
+                        });
+                    });
+                }
+            }]
+        });
+
+        // 右侧表格
+        let html = `<table class="table table-bordered table-sm text-center align-middle">
+            <thead class="table-light"><tr>
+                <th>点检类别Loại</th><th>数量Số lượng</th><th>占比Tỷ lệ</th>
+            </tr></thead><tbody>`;
+        stats.forEach(item => {
+            const percent = total > 0 ? ((item.count / total) * 100).toFixed(1) : 0;
+            html += `<tr><td>${item.name}</td><td>${item.count}</td><td>${percent}%</td></tr>`;
+        });
+        html += `<tr class="table-secondary fw-bold"><td>合计Tổng</td><td>${total}</td><td>100%</td></tr>
+            </tbody></table>`;
+        document.getElementById('categoryTable').innerHTML = html;
+    }
+
+    function switchCategoryMode(mode) {
+        currentCategoryMode = mode;
+        document.getElementById('btnCatToday').classList.toggle('active', mode === 'today');
+        document.getElementById('btnCatWeek').classList.toggle('active', mode === 'week');
+        document.getElementById('btnCatRange').classList.toggle('active', mode === 'range');
+        drawCategoryChart(mode);
+    }
+
+
+
     // ==================== 页面加载 ====================
     window.onload = function() {
         fillTableFromSavedData();
@@ -805,6 +969,8 @@ window[sup.id + "Chart"] = new Chart(document.getElementById(sup.id), {
         });
 
         drawAllCompletionCharts();
+        // 画点检类别占比饼图
+        drawCategoryChart();
 
         // 强制小计行黄色
         function forceYellowTotalRows() {
@@ -833,6 +999,14 @@ window[sup.id + "Chart"] = new Chart(document.getElementById(sup.id), {
         makeTableCompact();
         setTimeout(makeTableCompact, 500);
     };
+
+
+
+
+
+
+
+
 
 
 

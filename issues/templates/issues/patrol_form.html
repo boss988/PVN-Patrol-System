@@ -69,14 +69,28 @@
     <!-- 隐藏字段：记录要删除的URL -->
     <input type="hidden" name="photos_to_delete" id="photos_to_delete" value="">
 
-    <div class="row g-3">
-        <div class="col-md-6">
+        <div class="row g-3">
+        <div class="col-md-4">
             <label class="form-label">越南负责人Người phụ trách Việt Nam（OP）</label>
             <input type="text" name="op_responsible" class="form-control" value="{% if issue %}{{ issue.op_responsible }}{% endif %}">
         </div>
 
+        <!-- ==================== 点检类别（必填下拉框） ==================== -->
+        <div class="col-md-4">
+            <label class="form-label">点检类别hạng mục kiểm tra <span class="text-danger">*</span></label>
+            <select name="category" class="form-control" required>
+                <option value="">-- 请选择类别Vui lòng chọn một danh mục --</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}"
+                        {% if issue and issue.category_id == cat.id %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
         <!-- ==================== 责任单位主管（下拉选择框） ==================== -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">责任单位主管Trưởng đơn vị chịu trách nhiệm</label>
             <select name="supervisor" class="form-control" required>
                 <option value="">-- 请选择主管 --</option>
@@ -89,7 +103,7 @@
                 {% endfor %}
             </select>
         </div>
-
+    </div>
 
     </div>
 

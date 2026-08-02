@@ -10,7 +10,9 @@ from .issues_views import (
     patrol_import,
     patrol_export,
     patrol_delete,
-    patrol_update_problem  # ← 新增的函数
+    patrol_update_problem,  # ← 新增的函数
+    marquee_notice_manage,
+    marquee_content_api,
 )
 
 app_name = 'issues'
@@ -41,4 +43,7 @@ urlpatterns = [
 
     # 新增：双击编辑“问题要改善”字段
     path('patrol/update-problem/<int:pk>/', patrol_update_problem, name='patrol_update_problem'),
+  # 新增公屏路由
+    path('patrol/marquee-notice/', marquee_notice_manage, name='marquee_notice_manage'),
+    path('patrol/marquee-content/', marquee_content_api, name='marquee_content_api'),
 ]

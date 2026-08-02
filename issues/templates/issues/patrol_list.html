@@ -59,6 +59,7 @@
         <th style="width:25%">问题要改善Vấn đề cần cải thiện</th>
         <th style="width:28%">照片/视频Ảnh / Video</th>
         <th style="width:10%" data-column="op">OP负责人 <span class="filter-icon">▼</span></th>
+        <th style="width:10%" data-column="category">类别 <span class="filter-icon">▼</span></th>
         <th style="width:10%" data-column="supervisor">主管 <span class="filter-icon">▼</span></th>
         <th style="width:6%" data-column="status">状态 <span class="filter-icon">▼</span></th>
         <th style="width:6%">操作</th>
@@ -105,6 +106,9 @@
         </td>
 
         <td data-value="{{ issue.op_responsible }}">{{ issue.op_responsible|default:"-" }}</td>
+        <td data-value="{% if issue.category %}{{ issue.category.name }}{% endif %}">
+            {% if issue.category %}{{ issue.category.name }}{% else %}-{% endif %}
+        </td>
         <td data-value="{{ issue.supervisor }}">{{ issue.supervisor|default:"-" }}</td>
         <td data-value="{{ issue.status }}">
             <span class="badge {% if issue.status == 'Open' %}bg-danger{% else %}bg-success{% endif %}">{{ issue.status }}</span>
@@ -224,6 +228,7 @@
         });
     }
 
+
 </script>
 
 <!-- ==================== 超级调试 JS（放在 block content 里面，保证执行） ==================== -->
@@ -288,6 +293,7 @@
 
         console.log('🎉 所有筛选功能已绑定完成！现在点击 ▼ 应该会有日志');
     });
+
 
 
 </script>

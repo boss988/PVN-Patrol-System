@@ -1,24 +1,17 @@
 from django.contrib import admin
-from .issues_models import EquipmentIssue, PatrolIssue   # 两个模型都注册
+from .issues_models import EquipmentIssue, PatrolIssue, PatrolCategory
 
-@admin.register(EquipmentIssue)
-class EquipmentIssueAdmin(admin.ModelAdmin):
+
+@admin.register(PatrolCategory)
+class PatrolCategoryAdmin(admin.ModelAdmin):
     """
-    EquipmentIssue 的 admin 配置（已开启删除功能）
+    点检类别管理（可在后台随时增删改）
     """
-    list_display = ('issue_code', 'equipment', 'desc', 'occur_date', 'severity', 'reoccur_status')
-    list_filter = ('severity', 'reoccur_status', 'occur_date')
-    search_fields = ('issue_code', 'desc', 'equipment__code', 'root_cause')
-    date_hierarchy = 'occur_date'
-    ordering = ('-occur_date',)
-
-    # 开启批量删除功能
-    actions = ['delete_selected']
-
-    def delete_selected(self, request, queryset):
-        queryset.delete()
-        self.message_user(request, "✅ 选中的问题点已删除！")
-    delete_selected.short_description = "🗑 删除选中的问题点"
+    list_display = ('order', 'name', 'is_active', 'created_at')
+    list_display_links = ('name',)  # ← 新增这一行（关键！）
+    list_editable = ('order', 'is_active')          # 可直接在列表页改排序和启用状态
+    search_fields = ('name',)
+    ordering = ('order',)
 
 
 @admin.register(PatrolIssue)
@@ -26,15 +19,16 @@ class PatrolIssueAdmin(admin.ModelAdmin):
     """
     PatrolIssue 的 admin 配置（点检记录也支持删除）
     """
-    list_display = ('date', 'line', 'station', 'problem_desc', 'op_responsible', 'status')
-    list_filter = ('status', 'date')
-    search_fields = ('problem_desc', 'line', 'station')
+    list_display = ('date', 'line', 'station', 'category', 'problem_desc', 'op_responsible', 'supervisor', 'status')
+    list_filter = ('status', 'date', 'category')    # 增加按类别筛选
+    search_fields = ('problem_desc', 'line', 'station', 'supervisor')
     date_hierarchy = 'date'
     ordering = ('-date',)
+    raw_id_fields = ('category',)                   # 类别多的时候更好用
 
     actions = ['delete_selected']
 
     def delete_selected(self, request, queryset):
         queryset.delete()
-        self.message_user(request, "✅ 选中的点检记录已删除！")
-    delete_selected.short_description = "🗑 删除选中的点检记录"
+        self.message_user(request, "选中的点检记录已删除！")
+    delete_selected.short_description = "删除选中的点检记录"

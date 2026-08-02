@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}公屏通知Thông báo màn hình{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 700px;">
+    <h3 class="mb-4">📢 公屏通知管理Quản lý thông báo màn hình</h3>
+
+    <!-- 当前状态 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">当前公屏状态Trạng thái hiện tại</div>
+        <div class="card-body">
+            {% if current_notice %}
+                <p class="mb-1"><strong>内容Nội dung：</strong>{{ current_notice.content }}</p>
+                <p class="mb-1"><strong>发布人Người đăng：</strong>{{ current_notice.created_by }}</p>
+                <p class="mb-0 text-muted"><strong>时间Thời gian：</strong>{{ current_notice.created_at|date:"Y-m-d H:i" }}</p>
+                <span class="badge bg-success mt-2">正在显示Đang hiển thị</span>
+            {% else %}
+                <p class="text-muted mb-0">当前没有启用的公屏通知，跑马灯显示点检日志。</p>
+                <p class="text-muted">Hiện không có thông báo, marquee hiển thị nhật ký điểm kiểm.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 发布新通知 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">发布新公屏通知Đăng thông báo mới</div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="publish">
+                <div class="mb-3">
+                    <label class="form-label">通知内容Nội dung thông báo</label>
+                    <input type="text" name="content" class="form-control form-control-lg"
+                           placeholder="例如：perry请来F75楼办公室" maxlength="200" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">📢 发布公屏Đăng thông báo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 关闭公屏 -->
+    {% if current_notice %}
+    <div class="card">
+        <div class="card-body">
+            <form method="post" onsubmit="return confirm('确定关闭公屏通知吗？关闭后跑马灯将恢复显示点检日志。');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="close">
+                <button type="submit" class="btn btn-outline-danger">❌ 关闭公屏Tắt thông báo</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

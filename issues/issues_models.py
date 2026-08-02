@@ -77,3 +77,96 @@ class PatrolIssue(models.Model):
         ordering = ['-date']
         verbose_name = "点检问题点记录"
         verbose_name_plural = "点检问题点记录"
+
+
+class PatrolCategory(models.Model):
+    """
+    点检问题类别（独立管理表）
+    可以在后台随时增加、修改、停用
+    """
+    name = models.CharField(max_length=50, unique=True, verbose_name="类别名称")
+    order = models.PositiveIntegerField(default=0, verbose_name="排序（数字越小越靠前）")
+    is_active = models.BooleanField(default=True, verbose_name="是否启用")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = "点检类别"
+        verbose_name_plural = "点检类别"
+
+    def __str__(self):
+        return self.name
+
+
+class PatrolIssue(models.Model):
+    """
+    点检问题点记录（独立于设备总表，每天小点检专用）
+    输入：人工输入或Excel导入
+    输出：列表 + 多张照片 + 状态
+    """
+    sequence = models.IntegerField(verbose_name="顺序", null=True, blank=True)
+    date = models.DateField(verbose_name="日期")
+    line = models.CharField(max_length=50, verbose_name="线别")
+    station = models.CharField(max_length=50, verbose_name="站别")
+    problem_desc = models.TextField(verbose_name="问题要改善")
+
+    # === 修改为支持多张照片 ===
+    photos = models.JSONField(default=list, blank=True, verbose_name="照片列表（多张）")
+    # 保留原来的单文件字段（兼容旧数据）
+    photo = models.FileField(upload_to='patrol_photos/', null=True, blank=True, verbose_name="照片/视频（单张兼容）")
+
+    op_responsible = models.CharField(max_length=100, verbose_name="越南负责人（OP）")
+    supervisor = models.CharField(max_length=100, verbose_name="责任单位主管")
+    status = models.CharField(
+        max_length=10,
+        choices=[('Open', 'Open'), ('Closed', 'Closed')],
+        default='Open',
+        verbose_name="情况"
+    )
+
+    # ==================== 新增字段（2026-08） ====================
+    # 点检类别（外键，新建时必填，历史数据允许为空）
+    category = models.ForeignKey(
+        PatrolCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,          # 数据库允许空（兼容旧数据）
+        verbose_name="点检类别",
+        related_name="issues"
+    )
+
+    # 两个备用字段（防止以后频繁改数据库）
+    spare_field_1 = models.CharField(max_length=200, blank=True, null=True, verbose_name="备用字段1")
+    spare_field_2 = models.CharField(max_length=200, blank=True, null=True, verbose_name="备用字段2")
+    # ===========================================================
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.date} - {self.line} - {self.station}"
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = "点检问题点记录"
+        verbose_name_plural = "点检问题点记录"
+
+class MarqueeNotice(models.Model):
+    """
+    公屏通知（跑马灯优先显示）
+    整个系统只使用最新的一条启用中的通知
+    """
+    content = models.CharField(max_length=200, verbose_name="通知内容")
+    is_active = models.BooleanField(default=True, verbose_name="是否启用")
+    created_by = models.CharField(max_length=50, blank=True, verbose_name="发布人")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="发布时间")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "公屏通知"
+        verbose_name_plural = "公屏通知"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        status = "启用" if self.is_active else "已关闭"
+        return f"[{status}] {self.content[:30]}"

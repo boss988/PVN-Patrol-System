@@ -78,7 +78,90 @@ def patrol_analytics_dashboard(request):
     for sup, cnt in per_supervisor_counts.items():
         print(f"   → '{sup}'  Open: {cnt['open']} | Closed: {cnt['closed']}")
 
+    # ==================== 统计点检类别（今日 + 本周 + 选定时间范围） ====================
+    from collections import Counter
+
+
+    today = timezone.now().date()
+    week_start = today - timedelta(days=today.weekday())  # 本周周一
+    week_end = week_start + timedelta(days=6)
+
+    def count_categories(qs):
+        counter = Counter()
+        for issue in qs:
+            if issue.category:
+                counter[issue.category.name] += 1
+            else:
+                counter['未分类'] += 1
+        return [{'name': n, 'count': c} for n, c in counter.most_common()]
+
+    # 1. 选定时间范围（原来的逻辑）
+    category_stats = count_categories(queryset)
+
+    # 2. 今日
+    category_stats_today = count_categories(PatrolIssue.objects.filter(date=today))
+
+    # 3. 本周
+    category_stats_week = count_categories(
+        PatrolIssue.objects.filter(date__range=[week_start, week_end])
+    )
+
+    print(f"📊 选定范围: {category_stats}")
+    print(f"📊 今日: {category_stats_today}")
+    print(f"📊 本周: {category_stats_week}")
+
     saved_data = load_summary_data()
+
+    # ==================== 最近8周主管问题点统计（专门给按周图表用） ====================
+
+    import datetime
+
+    weeks_data = []          # 用于前端的周标签和数据
+    supervisor_week_counts = defaultdict(lambda: defaultdict(int))  # {主管: {周标签: 数量}}
+
+    # 最近8周（从本周往前推）
+    today = timezone.now().date()
+    current_monday = today - timedelta(days=today.weekday())
+
+    for i in range(7, -1, -1):   # 从8周前到本周，共8周
+        week_start = current_monday - timedelta(weeks=i)
+        week_end = week_start + timedelta(days=6)
+
+        # 计算周数标签 Wxx
+        week_num = week_start.isocalendar()[1]
+        week_label = f"W{week_num:02d}"
+        print(
+            f"【周调试】{week_label}: {week_start} ~ {week_end} | 记录数: {PatrolIssue.objects.filter(date__range=[week_start, week_end]).count()}")
+
+        # 统计这一周各主管的问题数
+        week_qs = PatrolIssue.objects.filter(date__range=[week_start, week_end])
+        for issue in week_qs:
+            raw_sup = getattr(issue, 'supervisor', '').strip()
+            normalized = normalize_supervisor_name(raw_sup)
+            if normalized:
+                # 简化成短名字，方便图表显示
+                short_name = normalized.split('(')[0].strip()
+                supervisor_week_counts[short_name][week_label] += 1
+
+        weeks_data.append(week_label)
+
+    # 转成前端方便用的格式
+    weekly_chart_data = {
+        'labels': weeks_data,
+        'datasets': []
+    }
+    colors = ["#198754", "#dc3545", "#ffc107", "#6f42c1"]
+    color_idx = 0
+    for sup_name, week_counts in supervisor_week_counts.items():
+        weekly_chart_data['datasets'].append({
+            'label': sup_name,
+            'data': [week_counts.get(w, 0) for w in weeks_data],
+            'borderColor': colors[color_idx % len(colors)],
+            'backgroundColor': colors[color_idx % len(colors)],
+        })
+        color_idx += 1
+
+    print("📊 最近8周数据:", weekly_chart_data)
 
     context = {
         'start_date': start_date,
@@ -90,6 +173,10 @@ def patrol_analytics_dashboard(request):
         'saved_data': saved_data,
         'per_supervisor_counts': dict(per_supervisor_counts),
         'patrol_edit_users': PATROL_EDIT_DELETE_USERS,  # ← 新增这一行白名单
+        'category_stats': category_stats,               # 选定时间范围
+        'category_stats_today': category_stats_today,   # 今日
+        'category_stats_week': category_stats_week,     # 本周
+        'weekly_chart_data': weekly_chart_data,  # 最近8周主管数据
     }
 
     print("【DEBUG】传递给模板的 per_supervisor_counts keys:", list(per_supervisor_counts.keys()))
