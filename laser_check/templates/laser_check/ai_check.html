@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI 检测 - {{ part_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>AI 检测 - 料号: <strong>{{ part_number }}</strong></h2>
+        <a href="{% url 'laser_check:check_detail' part_number %}" class="btn btn-secondary">← 返回检查页</a>
+    </div>
+
+    <div class="row g-4">
+        <!-- 左侧：产品图 -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <strong>产品图（标准图）</strong>
+                </div>
+                <div class="card-body p-0 text-center" style="min-height: 500px; background: #f8f9fa;">
+                    <div id="product-drop" class="drop-zone h-100 d-flex align-items-center justify-content-center">
+                        <img id="product-preview" src="" style="max-height: 480px; display: none;">
+                        <div id="product-placeholder" class="text-muted">
+                            <p>请在这里粘贴产品图截图<br>（Ctrl + V）</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：镭雕图 -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <strong>镭雕图（待检测）</strong>
+                </div>
+                <div class="card-body p-0 text-center" style="min-height: 500px; background: #f8f9fa;">
+                    <div id="laser-drop" class="drop-zone h-100 d-flex align-items-center justify-content-center">
+                        <img id="laser-preview" src="" style="max-height: 480px; display: none;">
+                        <div id="laser-placeholder" class="text-muted">
+                            <p>请在这里粘贴镭雕图截图<br>（Ctrl + V）</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center my-4">
+        <button id="start-ai-btn" class="btn btn-success btn-lg px-5">
+            🚀 开始 AI 检测
+        </button>
+    </div>
+
+    <div id="result-area" class="card" style="display: none;">
+        <div class="card-header bg-info text-white">
+            <strong>AI 检测结果</strong>
+        </div>
+        <div class="card-body" id="ai-result"></div>
+    </div>
+</div>
+
+<script>
+    let productBase64 = '';
+    let laserBase64 = '';
+
+    function handlePaste(e, type) {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64 = event.target.result;
+                    if (type === 'product') {
+                        productBase64 = base64;
+                        document.getElementById('product-preview').src = base64;
+                        document.getElementById('product-preview').style.display = 'block';
+                        document.getElementById('product-placeholder').style.display = 'none';
+                    } else {
+                        laserBase64 = base64;
+                        document.getElementById('laser-preview').src = base64;
+                        document.getElementById('laser-preview').style.display = 'block';
+                        document.getElementById('laser-placeholder').style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+    }
+
+    document.getElementById('product-drop').addEventListener('paste', (e) => handlePaste(e, 'product'));
+    document.getElementById('laser-drop').addEventListener('paste', (e) => handlePaste(e, 'laser'));
+
+    document.getElementById('start-ai-btn').addEventListener('click', async function() {
+        if (!productBase64 || !laserBase64) {
+            alert('请先粘贴两张图片！');
+            return;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '正在检测，请稍候... (约10-20秒)';
+
+        const resultArea = document.getElementById('result-area');
+        const resultDiv = document.getElementById('ai-result');
+        resultDiv.innerHTML = '<p class="text-center text-info">AI 正在分析，请稍候...</p>';
+        resultArea.style.display = 'block';
+
+        try {
+            const res = await fetch("{% url 'laser_check:ai_check' part_number %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    'product_image': productBase64,
+                    'laser_image': laserBase64
+                })
+            });
+
+            const data = await res.json();
+            console.log("后端返回数据:", data);   // 调试用
+
+            if (data.status === 'success') {
+                resultDiv.innerHTML = `<pre class="bg-light p-3 border">${data.result}</pre>`;
+            } else {
+                resultDiv.innerHTML = `<p class="text-danger">错误: ${data.message}</p>`;
+            }
+        } catch (e) {
+            resultDiv.innerHTML = `<p class="text-danger">请求失败: ${e.message}</p>`;
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '🚀 开始 AI 检测';
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}产线看板 - {{ current_line.name }}{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-4">🛠️ 产线看板 - {{ current_line.name }}</h2>
+
+<!-- 顶部栏 -->
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <form method="get" class="flex-grow-1 me-3">
+        <select name="line" class="form-select form-select-lg" onchange="this.form.submit()">
+            {% for l in lines %}
+                <option value="{{ l.name }}" {% if l == current_line %}selected{% endif %}>{{ l.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <button type="button" onclick="toggleSearch()" class="btn btn-primary btn-lg me-3" id="toggle-btn">
+        🔍 添加设备
+    </button>
+
+    <!-- 缩放按钮（最笨最稳写法） -->
+    <div class="btn-group">
+        <button onclick="zoomOut()" class="btn btn-outline-secondary">🔍 缩小</button>
+        <button onclick="resetZoom()" class="btn btn-outline-secondary">🔄 还原</button>
+        <button onclick="zoomIn()" class="btn btn-outline-secondary">🔎 放大</button>
+    </div>
+</div>
+
+<!-- 搜索栏 -->
+<div id="search-bar" class="mb-4 border p-3 bg-light" style="display: none;">
+    <h5>🔍 搜索并选中设备（RFID扫码优先）</h5>
+    <form method="get">
+        {% include 'search/search_form_snippet.html' with form=form %}
+    </form>
+</div>
+
+<!-- 搜索结果 -->
+{% if results %}
+<div class="mb-4">
+    <h5 class="text-success">✅ 搜索结果（点击插入）</h5>
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>ID</th><th>设备名称</th><th>厂别</th><th>线别</th><th>机种</th><th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for eq in results %}
+            <tr>
+                <td><strong>{{ eq.code }}</strong></td>
+                <td>{{ eq.name }}</td>
+                <td>{{ eq.area|default:"-" }}</td>
+                <td>{{ eq.line|default:"-" }}</td>
+                <td>{{ eq.model_type|default:"-" }}</td>
+                <td>
+                    <a href="/production/add-to-line/?line={{ current_line.name }}&equipment_id={{ eq.id }}" class="btn btn-success btn-sm">插入到产线</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- 真正工厂横向长产线（50台全显示） -->
+<div id="production-line-container" style="overflow-x: auto; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+    <div id="production-line" style="display: flex; flex-wrap: nowrap; gap: 18px; transition: transform 0.3s ease;">
+        {% for eq in equipments %}
+            <div class="card shadow-sm text-center position-relative" style="min-width: 210px; flex-shrink: 0;" data-equipment-id="{{ eq.id }}">
+                <button onclick="alert('位置插入后续添加')" class="btn btn-success btn-sm position-absolute" style="top:50%; left:-18px; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; font-size:24px;">+</button>
+                <button onclick="if(confirm('确定删除吗？')) window.location='/production/remove-from-line/?line={{ current_line.name }}&equipment_id={{ eq.id }}'" class="btn btn-danger btn-sm position-absolute" style="top:8px; right:8px; width:28px; height:28px; border-radius:50%; padding:0; font-size:18px;">×</button>
+
+                {% if eq.image %}
+                    <img src="{{ eq.image.url }}" class="card-img-top" style="height:160px; object-fit:cover;">
+                {% else %}
+                    <div class="text-center py-4 bg-light" style="height:160px;">
+                        <img src="{% static 'default_robot.png' %}" style="width:85%; height:auto;">
+                        <br><small class="text-muted">无照片（Optimus）</small>
+                    </div>
+                {% endif %}
+
+                <div class="card-body p-3">
+                    <h6 class="mb-2 fw-bold">{{ eq.name }}</h6>
+                    <p class="mb-1 small text-muted">编号: <strong>{{ eq.code }}</strong></p>
+                    <p class="mb-3">
+                        <span class="badge fs-3 px-4 py-2 {% if eq.health_score >= 80 %}bg-success{% elif eq.health_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ eq.health_score }} 分
+                        </span>
+                    </p>
+                    <div class="small text-muted">站别: {{ eq.station|default:"-" }} | 线别: {{ eq.line|default:"-" }}</div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center w-100 py-5 text-muted">当前产线暂无设备</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// 拖拽
+Sortable.create(document.getElementById('production-line'), { animation: 150 });
+
+// 搜索栏
+function toggleSearch() {
+    const bar = document.getElementById('search-bar');
+    const btn = document.getElementById('toggle-btn');
+    if (bar.style.display === 'none' || bar.style.display === '') {
+        bar.style.display = 'block';
+        btn.innerHTML = '🔍 收起搜索栏';
+    } else {
+        bar.style.display = 'none';
+        btn.innerHTML = '🔍 添加设备';
+    }
+}
+
+// 缩放（最笨最稳版：函数挂 window + alert）
+let zoomLevel = 1;
+const line = document.getElementById('production-line');
+
+window.zoomIn = function() {
+    zoomLevel += 0.1;
+    line.style.transform = `scale(${zoomLevel})`;
+    alert('🔎 已放大（当前 ' + zoomLevel.toFixed(1) + ' 倍）');
+};
+
+window.zoomOut = function() {
+    zoomLevel = Math.max(0.5, zoomLevel - 0.1);
+    line.style.transform = `scale(${zoomLevel})`;
+    alert('🔍 已缩小（当前 ' + zoomLevel.toFixed(1) + ' 倍）');
+};
+
+window.resetZoom = function() {
+    zoomLevel = 1;
+    line.style.transform = `scale(1)`;
+    alert('🔄 已还原为原始大小');
+};
+</script>
+{% endblock %}

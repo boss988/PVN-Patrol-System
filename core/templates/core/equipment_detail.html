@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}设备详情 - {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="background:#f8f9fa; min-height:100vh;">
+
+    <h1 class="text-center mb-4">{{ equipment.name }}（{{ equipment.code }}）</h1>
+    <p class="text-center text-muted mb-5">
+        {{ equipment.line|default:'' }} / {{ equipment.station|default:'-' }} / {{ equipment.eq_type|default:'-' }}
+    </p>
+
+    <!-- ==================== 调试信息（保留） ==================== -->
+    <div class="alert alert-info">
+        <strong>调试信息：</strong><br>
+        预测URL = <code>{% url 'core:equipment_ai_predict' equipment.pk %}</code>
+    </div>
+
+    <!-- ==================== 雷达图（完整8个小圆） ==================== -->
+    <div style="position:relative; width:800px; height:800px; margin:0 auto;">
+
+        <!-- 大圆 -->
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
+                    width:360px; height:360px; border-radius:50%;
+                    background:conic-gradient(#28a745 {{ equipment.health_score }}%, #dc3545 {{ health_complement }}%);
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:110px; font-weight:bold; color:white; box-shadow:0 30px 70px rgba(0,0,0,0.4);">
+            {{ equipment.health_score }}
+        </div>
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, 85px); color:#007bff; font-size:22px;">
+            整体健康度
+        </div>
+
+        <!-- 8个小圆（完整可点击） -->
+        <a href="{% url 'design:global_design_list' %}?equipment_id={{ equipment.pk }}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#dc3545; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(0deg) translate(280px) rotate(-0deg);">
+            <small style="opacity:0.85; font-size:15px;">设计</small>
+            <strong style="font-size:36px;">{{ equipment.design_score|default:0 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'issues:issues_list' equipment.pk %}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(45deg) translate(280px) rotate(-45deg);">
+            <small style="opacity:0.85; font-size:15px;">问题点</small>
+            <strong style="font-size:36px;">{{ equipment.issues_score|default:92 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'alerts:global_alerts_list' %}?equipment_pk={{ equipment.pk }}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(90deg) translate(280px) rotate(-90deg);">
+            <small style="opacity:0.85; font-size:15px;">报警</small>
+            <strong style="font-size:36px;">{{ equipment.alerts_score|default:100 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'spares:spares_list' equipment.pk %}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(135deg) translate(280px) rotate(-135deg);">
+            <small style="opacity:0.85; font-size:15px;">备品</small>
+            <strong style="font-size:36px;">{{ equipment.spares_score|default:92 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'maintenance:global_maintenance_list' %}?equipment_pk={{ equipment.pk }}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(180deg) translate(280px) rotate(-180deg);">
+            <small style="opacity:0.85; font-size:15px;">保养</small>
+            <strong style="font-size:36px;">{{ equipment.maintenance_score|default:100 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'data:global_data_list' %}?equipment_pk={{ equipment.pk }}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(225deg) translate(280px) rotate(-225deg);">
+            <small style="opacity:0.85; font-size:15px;">数据</small>
+            <strong style="font-size:36px;">{{ equipment.data_score|default:100 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'personnel:global_personnel_list' %}?equipment_pk={{ equipment.pk }}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(270deg) translate(280px) rotate(-270deg);">
+            <small style="opacity:0.85; font-size:15px;">人员</small>
+            <strong style="font-size:36px;">{{ equipment.personnel_score|default:100 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+
+        <a href="{% url 'performance:global_performance_list' %}?equipment_pk={{ equipment.pk }}" style="text-decoration:none; position:absolute; top:40%; left:43%; width:155px; height:155px; border-radius:50%; background:#28a745; color:white; display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 12px 30px rgba(0,0,0,0.3); transform:rotate(315deg) translate(280px) rotate(-315deg);">
+            <small style="opacity:0.85; font-size:15px;">性能</small>
+            <strong style="font-size:36px;">{{ equipment.performance_score|default:100 }}</strong>
+            <span style="font-size:15px;">分</span>
+        </a>
+    </div>
+
+    <!-- ==================== AI预测结果（只显示真实值） ==================== -->
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white text-center">
+                    <h5>🐙 龙虾AI预测结果（Qwen2.5:7B）</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if equipment.ai_last_predict %}
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h3 class="text-success">{{ equipment.ai_score }} 分</h3>
+                            <p>AI健康度</p>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="text-warning">{{ equipment.ai_fault_prob }}%</h3>
+                            <p>下周故障概率</p>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="text-info">{{ equipment.ai_remaining_life }}</h3>
+                            <p>预计剩余寿命（天）</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <p><strong>AI建议：</strong> {{ equipment.ai_suggestion|default:"暂无" }}</p>
+                    <p><strong>Top风险：</strong> {{ equipment.ai_top_risks|join:", "|default:"暂无" }}</p>
+                    <small class="text-muted">最后预测时间：{{ equipment.ai_last_predict|date:"Y-m-d H:i:s" }}</small>
+                    {% else %}
+                    <p class="text-center text-muted py-5">暂无AI预测结果<br>点击下方按钮开始真实预测</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 预测按钮 ==================== -->
+    <div class="text-center mt-4">
+        <a id="predict-btn" href="{% url 'core:equipment_ai_predict' equipment.pk %}"
+           class="btn btn-danger btn-lg shadow-lg px-5 py-3 fs-4"
+           onclick="alert('按钮点击成功！即将跳转到预测...');">
+            🚀 龙虾AI预测
+        </a>
+    </div>
+
+</div>
+
+<!-- ==================== 全屏进度条 ==================== -->
+<div id="loading-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+    <div class="text-white text-center">
+        <div class="spinner-border text-light mb-4" style="width:80px; height:80px;"></div>
+        <h4>正在调用龙虾AI预测...</h4>
+        <p class="small">请勿关闭页面，预计需要 30-60 秒</p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('predict-btn').addEventListener('click', function() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+    });
+</script>
+{% endblock %}

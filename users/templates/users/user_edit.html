@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}编辑用户{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-white text-center">
+                    <h4>✏️ 编辑用户 - {{ user.username }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">工号（不可修改）</label>
+                            <input type="text" value="{{ user.username }}" class="form-control" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">姓名</label>
+                            <input type="text" name="name" value="{{ profile.name|default:'' }}" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">职能 / 部门</label>
+                            <input type="text" name="department" value="{{ profile.department|default:'' }}" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">权限领域</label>
+                            <input type="text" name="permission_area" value="{{ profile.permission_area|default:'' }}" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">用户角色</label>
+                            <select name="role" class="form-select">
+                                <option value="user" {% if profile.role == 'user' %}selected{% endif %}>普通用户</option>
+                                <option value="admin" {% if profile.role == 'admin' %}selected{% endif %}>管理员</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning">保存修改</button>
+                            <a href="{% url 'users:user_list' %}" class="btn btn-secondary">取消</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📦 {{ equipment.name }} - 备品清单</h2>
+
+<!-- 绿色当前设备提示 -->
+<div class="alert alert-success d-flex align-items-center">
+    <strong>当前设备：</strong> 
+    <span class="badge bg-dark ms-2">{{ equipment.code }} - {{ equipment.station }} - {{ equipment.line }}</span>
+    <a href="{% url 'spares:spare_create' equipment.pk %}" class="btn btn-primary btn-sm ms-auto">
+        ➕ 新增备品
+    </a>
+</div>
+
+<table class="table table-striped table-hover align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>名称</th>
+            <th>规格</th>
+            <th>供应商</th>
+            <th>现有库存</th>
+            <th>安全库存</th>
+            <th>使用数量</th>
+            <th>寿命(月)</th>
+            <th>差异</th>
+            <th style="width:180px;">照片/视频</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in spares %}
+        <tr>
+            <td><strong>{{ s.name }}</strong></td>
+            <td>{{ s.spec|default:"-" }}</td>
+            <td>{{ s.supplier|default:"-" }}</td>
+            <td>{{ s.stock_qty }}</td>
+            <td>{{ s.min_stock }}</td>
+            <td>{{ s.usage_qty }}</td>
+            <td>{{ s.life_months }}</td>
+            <td>{{ s.difference }}</td>
+            <td>
+                {% if s.photos and s.photos|length > 0 %}
+                    {% for url in s.photos %}
+                        {% if url|slice:"-4:" in '.mp4.mov.avi.mkv' %}
+                            <video src="{{ url }}" width="80" height="60" controls></video>
+                        {% else %}
+                            <img src="{{ url }}" width="80" height="60" class="img-thumbnail" style="object-fit:cover;">
+                        {% endif %}
+                    {% endfor %}
+                {% elif s.photo %}
+                    <img src="{{ s.photo.url }}" width="80" height="60" class="img-thumbnail" style="object-fit:cover;">
+                {% else %}
+                    <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'spares:spares_list' equipment.pk %}" class="btn btn-sm btn-outline-danger"
+                   onclick="if(confirm('确定删除 {{ s.name }} 吗？')) return true; else return false;">
+                    删除
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="10" class="text-center text-muted py-4">暂无备品记录</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI检测历史 - {{ part_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>AI检测历史 - 料号: <strong>{{ part_number }}</strong></h2>
+        <a href="{% url 'laser_check:check_detail' part_number %}" class="btn btn-secondary">← 返回检查页</a>
+    </div>
+
+    {% if records %}
+        <div class="list-group">
+            {% for record in records %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                    <strong>{{ record.created_at|date:"Y-m-d H:i" }} （{{ record.created_by }}）</strong>
+                </div>
+                <pre class="mt-2 bg-light p-3">{{ record.result_text }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <h5>暂无检测记录</h5>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

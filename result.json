@@ -1,0 +1,10 @@
+{
+  "ai_score": 75,
+  "fault_prob_next_week": 45,
+  "remaining_life_days": 360,
+  "suggestion": "增加维护频率，关注备件库存，监测振动水平。",
+  "top_risks": [
+    "ct_deviation",
+    "spares_low"
+  ]
+}

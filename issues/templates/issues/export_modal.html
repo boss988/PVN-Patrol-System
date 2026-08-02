@@ -1,0 +1,66 @@
+{% load i18n %}
+
+<!-- ==================== 导出Excel 独立弹窗 ==================== -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>📥 {% trans "导出Excel" %}</h5>
+            </div>
+            <div class="modal-body">
+                <p>将导出您当前勾选的记录（共 <strong id="export-count">0</strong> 条）</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" onclick="doExport()" class="btn btn-success">确认导出</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 更新数量
+    function updateExportCount() {
+        const selected = document.querySelectorAll('.row-checkbox:checked').length;
+        document.getElementById('export-count').textContent = selected;
+    }
+
+    // 使用 fetch 下载（彻底解决 .htm 问题）
+    function doExport() {
+        const selected = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            alert('请至少勾选一条记录！');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        formData.append('selected_ids', selected.join(','));
+
+        fetch("{% url 'issues:patrol_export' %}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('导出失败');
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `点检问题点记录_${selected.length}条.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+        })
+        .catch(err => {
+            alert('导出失败：' + err.message);
+        });
+    }
+
+    // 打开弹窗时更新数量
+    document.getElementById('exportModal').addEventListener('show.bs.modal', updateExportCount);
+</script>

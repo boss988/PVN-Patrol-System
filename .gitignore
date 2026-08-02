@@ -1,0 +1,30 @@
+﻿# 虚拟环境（绝对不要上传）
+venv/
+myenv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+
+# Django
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 其他大文件/临时文件
+*.zip
+*.pyd
+license.key
+pdfjs-*/ 
+dist/

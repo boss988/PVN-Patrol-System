@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}所有保养记录{% endblock %}
+{% block content %}
+<h2>📋 所有保养记录（历史完成记录）</h2>
+
+<!-- 统一7字段搜索（复用 search app） + 日期范围 -->
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-2"><label>ID</label>{{ form.id_search }}</div>
+        <div class="col-md-2"><label>设备名称</label>{{ form.name }}</div>
+        <div class="col-md-2"><label>厂别</label>{{ form.area }}</div>
+        <div class="col-md-2"><label>线别</label>{{ form.line }}</div>
+        <div class="col-md-2"><label>机种名称</label>{{ form.model_type }}</div>
+        <div class="col-md-2"><label>设备状态</label>{{ form.status }}</div>
+        <div class="col-md-2"><label>站别</label>{{ form.station }}</div>
+
+        <div class="col-md-3">
+            <label>开始日期</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-3">
+            <label>结束日期</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-2 mt-4">
+            <button type="submit" class="btn btn-primary w-100">🔍 查询</button>
+        </div>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>SOP项目</th>
+            <th>执行日期</th>
+            <th>执行后照片</th>
+            <th>执行人</th>
+            <th>稽核人</th>
+            <th>使用备品</th>
+            <th>状态</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in records %}
+        <tr>
+            <td><strong>{{ r.equipment.name }}</strong></td>
+            <td>{{ r.desc|truncatewords:10 }}</td>
+            <td>{{ r.maintenance_date }}</td>
+            <td>
+                {% if r.after_photo %}
+                    <img src="{{ r.after_photo.url }}" width="80" class="img-thumbnail">
+                {% else %}
+                    无
+                {% endif %}
+            </td>
+            <td>{{ r.performed_by|default:"-" }}</td>
+            <td>{{ r.audited_by|default:"-" }}</td>
+            <td>{% if r.spare_used %}✅{% else %}❌{% endif %}</td>
+            <td {% if r.is_overdue %}class="text-danger"{% else %}class="text-success"{% endif %}>
+                {% if r.is_overdue %}逾期⚠️{% else %}正常✅{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not records %}
+<p class="text-muted">暂无保养记录</p>
+{% endif %}
+{% endblock %}

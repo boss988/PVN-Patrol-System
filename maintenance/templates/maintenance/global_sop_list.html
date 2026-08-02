@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}保养SOP项目列表{% endblock %}
+{% block content %}
+<h2>📋 保养SOP项目列表（工厂风格）</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<!-- 新增/修改表单 -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        {% if editing_sop %}修改SOP项目{% else %}新增保养SOP项目{% endif %}
+    </div>
+    <div class="card-body">
+        <!-- 搜索设备 -->
+        <form method="get" class="mb-3">
+            <div class="row g-3">
+                <div class="col-md-2"><label>ID</label>{{ form.id_search }}</div>
+                <div class="col-md-2"><label>设备名称</label>{{ form.name }}</div>
+                <div class="col-md-2"><label>厂别</label>{{ form.area }}</div>
+                <div class="col-md-2"><label>线别</label>{{ form.line }}</div>
+                <div class="col-md-2"><label>机种名称</label>{{ form.model_type }}</div>
+                <div class="col-md-2"><label>站别</label>{{ form.station }}</div>
+                <div class="col-md-2 mt-4"><button type="submit" class="btn btn-primary w-100">🔍 搜索设备</button></div>
+            </div>
+        </form>
+
+        {% if selected_equipment %}
+        <div class="alert alert-info">✅ 当前设备：{{ selected_equipment.name }} (ID: {{ selected_equipment.code }})</div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if editing_sop %}<input type="hidden" name="edit_id" value="{{ editing_sop.id }}">{% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-3"><label>保养项目</label><input type="text" name="name" class="form-control" value="{{ editing_sop.name|default:'' }}" required></div>
+                <div class="col-md-2"><label>保养类别</label>
+                    <select name="category" class="form-control">
+                        <option value="daily" {% if editing_sop and editing_sop.category == 'daily' %}selected{% endif %}>日保</option>
+                        <option value="weekly" {% if editing_sop and editing_sop.category == 'weekly' %}selected{% endif %}>周保</option>
+                        <option value="monthly" {% if editing_sop and editing_sop.category == 'monthly' %}selected{% endif %}>月保</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><label>是否数值</label>
+                    <select name="is_numeric" class="form-control">
+                        <option value="否" {% if editing_sop and not editing_sop.is_numeric %}selected{% endif %}>否</option>
+                        <option value="是" {% if editing_sop and editing_sop.is_numeric %}selected{% endif %}>是</option>
+                    </select>
+                </div>
+                <div class="col-md-1"><label>下限</label><input type="text" name="lower_limit" class="form-control" value="{{ editing_sop.lower_limit|default:'' }}"></div>
+                <div class="col-md-1"><label>上限</label><input type="text" name="upper_limit" class="form-control" value="{{ editing_sop.upper_limit|default:'' }}"></div>
+                <div class="col-md-1"><label>单位</label><input type="text" name="unit" class="form-control" value="{{ editing_sop.unit|default:'' }}"></div>
+                <div class="col-md-2"><label>责任单位</label><input type="text" name="responsible_unit" value="{{ editing_sop.responsible_unit|default:'EQ' }}" class="form-control"></div>
+                <div class="col-md-3"><label>SOP图片</label><input type="file" name="sop_image" class="form-control"></div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success">
+                        {% if editing_sop %}✅ 更新SOP{% else %}✅ 提交新增{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-warning">请先搜索并选中一台设备</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- SOP列表 -->
+{% if sops %}
+<table class="table table-bordered table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>修改</th>
+            <th>保养ID</th>
+            <th>保养项目</th>
+            <th>保养类别</th>
+            <th>是否数值</th>
+            <th>下限</th>
+            <th>上限</th>
+            <th>单位</th>
+            <th>责任单位</th>
+            <th>SOP图片</th>
+            <th>删除</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for sop in sops %}
+        <tr>
+            <td>
+                <a href="?edit_id={{ sop.id }}" class="btn btn-primary btn-sm">修改</a>
+            </td>
+            <td>{{ forloop.counter|add:0|stringformat:"05d" }}</td>
+            <td>{{ sop.name }}</td>
+            <td>{{ sop.get_category_display }}</td>
+            <td>{{ sop.is_numeric|yesno:"是,否" }}</td>
+            <td>{{ sop.lower_limit|default:"-" }}</td>
+            <td>{{ sop.upper_limit|default:"-" }}</td>
+            <td>{{ sop.unit|default:"-" }}</td>
+            <td>{{ sop.responsible_unit }}</td>
+            <td>
+                {% if sop.sop_image %}
+                    <img src="{{ sop.sop_image.url }}" width="80" height="60" class="img-thumbnail">
+                {% else %}
+                    无
+                {% endif %}
+            </td>
+            <td>
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_id" value="{{ sop.id }}">
+                    <button type="submit" onclick="return confirm('确定删除这条SOP记录吗？')" class="btn btn-danger btn-sm">删除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% endblock %}

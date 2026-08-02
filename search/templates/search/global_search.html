@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}全局设备搜索{% endblock %}
+{% block content %}
+<h2>🔍 全局设备搜索（7字段组合版）</h2>
+
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-2"><label>ID</label>{{ form.id_search }}</div>
+        <div class="col-md-2"><label>设备名称</label>{{ form.name }}</div>
+        <div class="col-md-2"><label>厂别</label>{{ form.area }}</div>
+        <div class="col-md-2"><label>线别</label>{{ form.line }}</div>
+        <div class="col-md-2"><label>机种名称</label>{{ form.model_type }}</div>
+        <div class="col-md-2"><label>设备状态</label>{{ form.status }}</div>
+        <div class="col-md-2"><label>站别</label>{{ form.station }}</div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100 mt-4">🔍 搜索</button>
+        </div>
+    </div>
+</form>
+
+{% if results %}
+<p>找到 <strong>{{ results.count }}</strong> 台设备</p>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>设备名称</th>
+            <th>厂别</th>
+            <th>线别</th>
+            <th>机种名称</th>
+            <th>设备状态</th>
+            <th>站别</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for eq in results %}
+        <tr>
+            <td><strong>{{ eq.code }}</strong></td>
+            <td>{{ eq.name }}</td>
+            <td>{{ eq.area|default:"-" }}</td>
+            <td>{{ eq.line|default:"-" }}</td>
+            <td>{{ eq.model_type|default:"-" }}</td>
+            <td>{{ eq.get_status_display }}</td>
+            <td>{{ eq.station|default:"-" }}</td>
+            <td><a href="{% url 'core:equipment_detail' eq.pk %}" class="btn btn-info btn-sm">查看详情</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

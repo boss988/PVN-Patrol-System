@@ -1,0 +1,131 @@
+{% load i18n %}
+
+<!-- ==================== 发送邮件弹窗 ==================== -->
+<div class="modal fade" id="sendEmailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form id="emailForm" method="post" action="{% url 'notification:patrol_send_email' %}">
+                {% csrf_token %}
+                <input type="hidden" name="selected_ids" id="hidden-selected-ids">
+
+                <div class="modal-header">
+                    <h5>📧 {% trans "发送点检问题点邮件" %}</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-7">
+                            <h6>{% trans "已勾选记录" %}（共 <span id="count-selected">0</span> {% trans "条" %}）</h6>
+                            <div id="selected-preview" style="max-height:400px; overflow:auto;"></div>
+                        </div>
+                        <div class="col-md-5">
+                            <h6>{% trans "选择邮件群组" %}</h6>
+                            <select name="group_id" id="group-select" class="form-control mb-3" required>
+                                <option value="">-- {% trans "请选择群组" %} --</option>
+                                {% for group in groups %}
+                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="showNewGroupModal()">+ {% trans "新建群组" %}</button>
+                            <input type="text" name="subject" class="form-control mt-3" value="{% trans "点检问题点记录通知" %} - {{ today|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "取消" %}</button>
+                    <button type="button" onclick="submitEmailForm()" class="btn btn-primary">{% trans "发送邮件" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 新建群组弹窗 -->
+<div class="modal fade" id="newGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="newGroupForm" method="post" action="{% url 'notification:create_email_group' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5>{% trans "新建邮件群组" %}</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>{% trans "群组名称" %}</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>{% trans "描述" %}</label>
+                        <input type="text" name="description" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>{% trans "邮箱列表（一行一个）" %}</label>
+                        <textarea name="emails" class="form-control" rows="5" placeholder="example@company.com" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "取消" %}</button>
+                    <button type="button" onclick="saveNewGroup()" class="btn btn-success">{% trans "保存群组" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 更新选中记录预览
+    function updateSelectedPreview() {
+        const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+        document.getElementById('count-selected').textContent = selected.length;
+
+        const preview = document.getElementById('selected-preview');
+        preview.innerHTML = '';
+        selected.forEach(cb => {
+            const row = cb.closest('tr');
+            const desc = row ? row.querySelector('td:nth-child(5)').innerText.substring(0, 60) + '...' : '';
+            const div = document.createElement('div');
+            div.className = 'mb-1';
+            div.textContent = desc;
+            preview.appendChild(div);
+        });
+    }
+
+    // 发送邮件
+    function submitEmailForm() {
+        const selected = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            alert('请至少勾选一条记录！');
+            return;
+        }
+        document.getElementById('hidden-selected-ids').value = selected.join(',');
+        document.getElementById('emailForm').submit();
+    }
+
+    // 显示新建群组弹窗
+    function showNewGroupModal() {
+        const modal = new bootstrap.Modal(document.getElementById('newGroupModal'));
+        modal.show();
+    }
+
+    // 保存新建群组
+    function saveNewGroup() {
+        const form = document.getElementById('newGroupForm');
+        const fd = new FormData(form);
+        fetch(form.action, { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('group-select');
+                    const option = document.createElement('option');
+                    option.value = data.group_id;
+                    option.text = data.group_name;
+                    select.appendChild(option);
+                    select.value = data.group_id;
+                    bootstrap.Modal.getInstance(document.getElementById('newGroupModal')).hide();
+                    form.reset();
+                }
+            });
+    }
+
+    // 打开邮件弹窗时自动更新数量
+    document.getElementById('sendEmailModal').addEventListener('show.bs.modal', updateSelectedPreview);
+</script>

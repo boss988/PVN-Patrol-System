@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}导入备品Excel{% endblock %}
+{% block content %}
+<h2>导入备品清单</h2>
+
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label>选择你的Excel文件</label>
+        <input type="file" name="excel_file" class="form-control" accept=".xlsx">
+    </div>
+    <button type="submit" class="btn btn-success">立即导入</button>
+</form>
+
+<p class="text-muted mt-3">支持文件：LapTop 备品list-20251120.xlsx</p>
+{% endblock %}

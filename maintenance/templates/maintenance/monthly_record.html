@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}月度保养记录{% endblock %}
+{% block content %}
+<h2>📆 月度保养记录（{{ selected_month }}）</h2>
+
+<!-- 统一7字段搜索栏（复用search app） -->
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-2"><label>ID</label>{{ form.id_search }}</div>
+        <div class="col-md-2"><label>设备名称</label>{{ form.name }}</div>
+        <div class="col-md-2"><label>厂别</label>{{ form.area }}</div>
+        <div class="col-md-2"><label>线别</label>{{ form.line }}</div>
+        <div class="col-md-2"><label>机种名称</label>{{ form.model_type }}</div>
+        <div class="col-md-2"><label>设备状态</label>{{ form.status }}</div>
+        <div class="col-md-2"><label>站别</label>{{ form.station }}</div>
+        <div class="col-md-2 mt-4">
+            <button type="submit" class="btn btn-primary w-100">🔍 查询</button>
+        </div>
+    </div>
+</form>
+
+<!-- 醒目设备信息栏（工厂风格） -->
+<div class="border p-3 mb-4 bg-light text-center">
+    <strong>设备名称：</strong>{{ equipment.name }} &nbsp;&nbsp;&nbsp;&nbsp;
+    <strong>LINE/区域：</strong>{{ equipment.line|default:"-" }} {{ equipment.area|default:"-" }} &nbsp;&nbsp;&nbsp;&nbsp;
+    <strong>年/月：</strong>{{ selected_month }}
+</div>
+
+<table class="table table-bordered" style="border:3px solid black;">
+    <thead>
+        <tr style="background:#f8f9fa; font-weight:bold;">
+            <th rowspan="2">保养项目/日期</th>
+            <th rowspan="2">下限</th>
+            <th rowspan="2">上限</th>
+            <th rowspan="2">单位</th>
+            {% for day in days %}
+            <th style="text-align:center; width:35px; border:2px solid black;">{{ day }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <!-- 日保养 -->
+        <tr style="background:#e3f2fd; font-weight:bold;">
+            <td colspan="4"><strong>日保养</strong></td>
+            {% for day in days %}<td style="text-align:center; border:2px solid black;">OK</td>{% endfor %}
+        </tr>
+        {% for sop in sops %}
+        {% if sop.category == 'daily' %}
+        <tr>
+            <td>{{ sop.name }}</td>
+            <td>{{ sop.lower_limit|default:"-" }}</td>
+            <td>{{ sop.upper_limit|default:"-" }}</td>
+            <td>{{ sop.unit }}</td>
+            {% for day in days %}
+            <td style="text-align:center; border:2px solid black;">OK</td>
+            {% endfor %}
+        </tr>
+        {% endif %}
+        {% endfor %}
+
+        <!-- 周保养 -->
+        <tr style="background:#e3f2fd; font-weight:bold;">
+            <td colspan="4"><strong>周保养</strong></td>
+            {% for day in days %}<td style="text-align:center; border:2px solid black;">OK</td>{% endfor %}
+        </tr>
+        {% for sop in sops %}
+        {% if sop.category == 'weekly' %}
+        <tr>
+            <td>{{ sop.name }}</td>
+            <td>{{ sop.lower_limit|default:"-" }}</td>
+            <td>{{ sop.upper_limit|default:"-" }}</td>
+            <td>{{ sop.unit }}</td>
+            {% for day in days %}
+            <td style="text-align:center; border:2px solid black;">OK</td>
+            {% endfor %}
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- 底部签名 -->
+<div class="row mt-4" style="border-top:3px solid black; padding-top:15px;">
+    <div class="col-md-6"><strong>保養人：</strong> ________________________</div>
+    <div class="col-md-6"><strong>稽核人：</strong> ________________________</div>
+</div>
+{% endblock %}

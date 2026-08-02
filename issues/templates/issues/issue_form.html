@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}新增/编辑问题点{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white py-3">
+            <h4 class="mb-0">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                新增问题点 - {{ equipment.name }} ({{ equipment.code }})
+            </h4>
+        </div>
+
+        <div class="card-body p-5">
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>表单验证失败：</strong>
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field }}：{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="equipment" value="{{ equipment.pk }}">
+
+                <div class="row g-4">
+                    <!-- 问题码只显示，不提交 -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">问题码（自动生成）</label>
+                        <input type="text" class="form-control" value="保存后自动生成" readonly>
+                    </div>
+
+                    <!-- 日期选择器 -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">发生日期</label>
+                        <input type="date" name="occur_date" class="form-control dateinput" required>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">异常现象及原因</label>
+                        {{ form.desc }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">异常工时 (min)</label>
+                        {{ form.abnormal_work_time }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">甄别</label>
+                        {{ form.work_time_type }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">严重度</label>
+                        {{ form.severity }}
+                    </div>
+
+                    <!-- 照片上传 -->
+                    <div class="col-12">
+                        <label class="form-label fw-bold">照片/视频（可多选）</label>
+                        <input type="file" id="photoInput" name="photos" class="form-control" accept="image/*,video/*" multiple>
+                        <div id="previewArea" class="mt-3 d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-3 mt-5">
+                    <a href="{% url 'issues:global_issues_list' %}" class="btn btn-secondary px-4">取消</a>
+                    <button type="submit" class="btn btn-success px-5">保存问题点</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const preview = document.getElementById('previewArea');
+    preview.innerHTML = '';
+    Array.from(e.target.files).forEach(file => {
+        const url = URL.createObjectURL(file);
+        const div = document.createElement('div');
+        div.style.margin = '5px';
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.maxWidth = '160px';
+            img.style.maxHeight = '120px';
+            img.style.borderRadius = '6px';
+            div.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.src = url;
+            video.controls = true;
+            video.style.maxWidth = '160px';
+            video.style.maxHeight = '120px';
+            video.style.borderRadius = '6px';
+            div.appendChild(video);
+        }
+        preview.appendChild(div);
+    });
+});
+</script>
+{% endblock %}

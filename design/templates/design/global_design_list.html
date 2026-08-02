@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}所有设计信息{% endblock %}
+
+{% block content %}
+<h2>所有设计信息</h2>
+
+<!-- ==================== Search 搜索框 ==================== -->
+<div class="mb-4 border p-3 bg-light rounded-3">
+    <h5>🔍 先搜索并选中设备（RFID扫码优先）</h5>
+    <form method="get">
+        <div class="row g-3">
+            <div class="col-md-2"><label>ID / RFID</label>{{ form.id_search }}</div>
+            <div class="col-md-2"><label>设备名称</label>{{ form.name }}</div>
+            <div class="col-md-2"><label>厂别 / 区域</label>{{ form.area }}</div>
+            <div class="col-md-2"><label>线别</label>{{ form.line }}</div>
+            <div class="col-md-2"><label>机种名称</label>{{ form.model_type }}</div>
+            <div class="col-md-2"><label>设备状态</label>{{ form.status }}</div>
+            <div class="col-md-2"><label>站别</label>{{ form.station }}</div>
+            <div class="col-md-2 mt-4">
+                <button type="submit" class="btn btn-primary w-100">🔍 搜索设备</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ==================== 绿色当前设备提示条 + 两个按钮 ==================== -->
+{% if selected_equipment %}
+<div class="alert alert-success d-flex align-items-center justify-content-between">
+    <span>
+        ✅ 当前设备：{{ selected_equipment.name }}
+        (ID: {{ selected_equipment.code }} | RFID: {{ selected_equipment.rfid_card|default:"-" }})
+    </span>
+    <div>
+        <a href="{% url 'design:design_create' selected_equipment.pk %}" class="btn btn-success btn-sm me-2">新增设计信息</a>
+        <a href="{% url 'design:design_create' selected_equipment.pk %}" class="btn btn-warning btn-sm">编辑设计信息</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==================== 设计信息列表 ==================== -->
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>设备编号</th>
+            <th>设备名称</th>
+            <th>风险点描述</th>
+            <th>风险评分</th>
+            <th>照片</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for design in designs %}
+        <tr>
+            <td>{{ design.equipment.code }}</td>
+            <td>{{ design.equipment.name }}</td>
+            <td>{{ design.risk_points_text|truncatewords:15|default:"-" }}</td>
+            <td class="{% if design.design_risk_score > 50 %}text-danger{% else %}text-success{% endif %}">
+                <strong>{{ design.design_risk_score }} 分</strong>
+            </td>
+            <td>
+                {% if design.image %}
+                    <img src="{{ design.image.url }}" style="max-width:80px; border-radius:4px;">
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'design:design_detail' design.equipment.pk %}" class="btn btn-info btn-sm">详情</a>
+                <a href="{% url 'design:design_create' design.equipment.pk %}" class="btn btn-success btn-sm">编辑/上传</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center">没有找到匹配的设计信息</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

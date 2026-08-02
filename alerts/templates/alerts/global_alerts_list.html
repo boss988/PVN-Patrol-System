@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}所有报警记录{% endblock %}
+{% block content %}
+<h2>所有报警记录 (红灯 + 未处理高亮)</h2>
+
+<!-- 新建按钮在这里！ -->
+<a href="{% url 'alerts:alert_create' %}" class="btn btn-primary mb-3">➕ 新建报警记录</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>报警类型</th>
+            <th>描述</th>
+            <th>发生时间</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in alerts %}
+        <tr>
+            <td>{{ a.equipment.name }}</td>
+            <td>{{ a.get_alert_type_display }}</td>
+            <td>{{ a.desc }}</td>
+            <td>{{ a.occur_time|date:"Y-m-d H:i" }}</td>
+            <td {% if a.is_unhandled %}class="text-danger"{% else %}class="text-success"{% endif %}>
+                {% if a.is_unhandled %}
+                    未处理 ⚠️
+                {% else %}
+                    已处理 ✅
+                {% endif %}
+            </td>
+            <td>
+                {% if a.is_unhandled %}
+                <a href="{% url 'alerts:alert_mark_handled' a.pk %}" class="btn btn-success btn-sm">✅ 标记已处理</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not alerts %}
+<p class="text-muted">暂无报警记录（点击上面按钮手动新建，或运行红灯脚本）</p>
+{% endif %}
+{% endblock %}

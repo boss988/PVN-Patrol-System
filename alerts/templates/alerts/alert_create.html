@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}新建报警记录{% endblock %}
+{% block content %}
+<h2>手动新建报警记录</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label>设备</label>
+        <select name="equipment" class="form-control" required>
+            {% for e in equipments %}
+            <option value="{{ e.id }}">{{ e.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>报警类型</label>
+        <select name="alert_type" class="form-control" required>
+            <option value="red_light">红灯报警</option>
+            <option value="error_code">错误代码</option>
+            <option value="sensor">传感器异常</option>
+            <option value="other">其他</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>报警描述</label>
+        <textarea name="desc" class="form-control" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">✅ 保存报警记录</button>
+</form>
+{% endblock %}

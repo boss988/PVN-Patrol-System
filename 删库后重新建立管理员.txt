@@ -1,0 +1,10 @@
+删库后
+
+python create_superadmin.py
+新建立的用户登录了，是看不到管理菜单的，必须执行
+
+python fix_superuser.py
+把你新建立的用户设为管理员
+再用下面程序建立组：
+
+python create_groups.py

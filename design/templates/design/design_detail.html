@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}设计详情 - {{ equipment.name }}{% endblock %}
+{% block content %}
+<h2>设计详情 - {{ equipment.name }}</h2>
+
+<!-- 大图显示 -->
+{% if design.image %}
+    <img src="{{ design.image.url }}" style="max-width:600px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+{% else %}
+    <p class="text-muted">暂无照片</p>
+{% endif %}
+
+<!-- 下载按钮 -->
+{% if design.dvp_file %}
+    <p><a href="{{ design.dvp_file.url }}" class="btn btn-primary" target="_blank">📄 下载 DVP 文件</a></p>
+{% endif %}
+{% if design.pmp_file %}
+    <p><a href="{{ design.pmp_file.url }}" class="btn btn-primary" target="_blank">📄 下载 PMP 文件</a></p>
+{% endif %}
+
+<!-- 风险评分醒目显示 -->
+<h3>设计风险评分： <span class="badge bg-danger fs-3">{{ design.design_risk_score }} 分</span></h3>
+
+<!-- 其他字段 -->
+<p><strong>工业电脑：</strong> {{ design.has_computer|yesno:"有,无" }}</p>
+<p><strong>机械手：</strong> {{ design.has_robot_arm|yesno:"有,无" }}</p>
+<p><strong>视觉类型：</strong> {{ design.get_vision_type_display }}</p>
+<p><strong>风险点描述：</strong> {{ design.risk_points_text|default:"-" }}</p>
+
+<a href="{% url 'design:design_create' equipment.pk %}" class="btn btn-success">✏️ 编辑/重新上传</a>
+{% endblock %}

@@ -1,0 +1,343 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-16 21:56+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: .\templates\base.html:60
+msgid "设备管理系统"
+msgstr "Hệ thống quản lý thiết bị"
+
+#: .\templates\base.html:62
+msgid "设备总表"
+msgstr "Danh sách thiết bị tổng hợp"
+
+#: .\templates\base.html:63
+msgid "设计信息"
+msgstr "Thông tin thiết kế"
+
+#: .\templates\base.html:64
+msgid "问题点记录"
+msgstr "Bản ghi vấn đề"
+
+#: .\templates\base.html:65
+msgid "点检问题点记录"
+msgstr "Bản ghi kiểm tra vấn đề"
+
+#: .\templates\base.html:66
+msgid "备品"
+msgstr "Phụ tùng"
+
+#: .\templates\base.html:67
+msgid "报警记录"
+msgstr "Bản ghi cảnh báo"
+
+#: .\templates\base.html:71
+msgid "保养记录"
+msgstr "Bản ghi bảo dưỡng"
+
+#: .\templates\base.html:74
+msgid "所有保养记录"
+msgstr "Tất cả bản ghi bảo dưỡng"
+
+#: .\templates\base.html:75
+msgid "保养SOP项目列表"
+msgstr "Danh sách SOP bảo dưỡng"
+
+#: .\templates\base.html:76
+msgid "今天保养执行"
+msgstr "Thực hiện bảo dưỡng hôm nay"
+
+#: .\templates\base.html:77
+msgid "明天保养计划"
+msgstr "Kế hoạch bảo dưỡng ngày mai"
+
+#: .\templates\base.html:78
+msgid "月度保养记录"
+msgstr "Bản ghi bảo dưỡng hàng tháng"
+
+#: .\templates\base.html:82
+msgid "设备数据"
+msgstr "Dữ liệu thiết bị"
+
+#: .\templates\base.html:83
+msgid "看护人员"
+msgstr "Nhân viên chăm sóc"
+
+#: .\templates\base.html:84
+msgid "性能KPI"
+msgstr "KPI hiệu suất"
+
+#: .\templates\base.html:85
+msgid "健康度看板"
+msgstr "Bảng theo dõi sức khỏe"
+
+#: .\templates\base.html:86
+msgid "产线看板"
+msgstr "Bảng sản xuất"
+
+#: .\templates\base.html:87
+msgid "全局搜索"
+msgstr "Tìm kiếm toàn cục"
+
+#: .\templates\base.html:91
+msgid "用户管理"
+msgstr "Quản lý người dùng"
+
+#: .\templates\base.html:109
+msgid "登出"
+msgstr "Đăng xuất"
+
+#: .\templates\base.html:111
+msgid "登录"
+msgstr "Đăng nhập"
+
+#: .\templates\core\equipment_list.html
+msgid "设备总表"
+msgstr "Danh sách thiết bị tổng hợp"
+
+#: .\templates\core\equipment_list.html
+msgid "全部设备"
+msgstr "Tất cả thiết bị"
+
+#: .\templates\core\equipment_list.html
+msgid "台"
+msgstr "cái"
+
+#: .\templates\core\equipment_list.html
+msgid "ID / RFID"
+msgstr "ID / RFID"
+
+#: .\templates\core\equipment_list.html
+msgid "设备名称"
+msgstr "Tên thiết bị"
+
+#: .\templates\core\equipment_list.html
+msgid "区域"
+msgstr "Khu vực"
+
+#: .\templates\core\equipment_list.html
+msgid "线别"
+msgstr "Dây chuyền"
+
+#: .\templates\core\equipment_list.html
+msgid "机种"
+msgstr "Loại máy"
+
+#: .\templates\core\equipment_list.html
+msgid "站别"
+msgstr "Trạm"
+
+#: .\templates\core\equipment_list.html
+msgid "查询"
+msgstr "Tìm kiếm"
+
+#: .\templates\core\equipment_list.html
+msgid "新建设备"
+msgstr "Tạo mới thiết bị"
+
+#: .\templates\core\equipment_list.html
+msgid "从Excel导入设备"
+msgstr "Nhập từ Excel"
+
+#: .\templates\core\equipment_list.html
+msgid "编号"
+msgstr "Mã số"
+
+#: .\templates\core\equipment_list.html
+msgid "名称"
+msgstr "Tên"
+
+#: .\templates\core\equipment_list.html
+msgid "站别"
+msgstr "Trạm"
+
+#: .\templates\core\equipment_list.html
+msgid "线别"
+msgstr "Dây chuyền"
+
+#: .\templates\core\equipment_list.html
+msgid "RFID卡号"
+msgstr "Số thẻ RFID"
+
+#: .\templates\core\equipment_list.html
+msgid "区域"
+msgstr "Khu vực"
+
+#: .\templates\core\equipment_list.html
+msgid "类别"
+msgstr "Loại"
+
+#: .\templates\core\equipment_list.html
+msgid "设备类型"
+msgstr "Loại thiết bị"
+
+#: .\templates\core\equipment_list.html
+msgid "状态"
+msgstr "Trạng thái"
+
+#: .\templates\core\equipment_list.html
+msgid "健康度"
+msgstr "Độ khỏe"
+
+#: .\templates\core\equipment_list.html
+msgid "操作"
+msgstr "Thao tác"
+
+#: .\templates\core\equipment_list.html
+msgid "详情"
+msgstr "Chi tiết"
+
+#: .\templates\core\equipment_list.html
+msgid "修改"
+msgstr "Sửa"
+
+#: .\templates\core\equipment_list.html
+msgid "删除"
+msgstr "Xóa"
+
+#: .\templates\core\equipment_list.html
+msgid "确定删除"
+msgstr "Xác nhận xóa"
+
+#: .\templates\core\equipment_list.html
+msgid "吗？"
+msgstr "không?"
+
+#: .\templates\core\equipment_list.html
+msgid "没有找到符合条件的设备"
+msgstr "Không tìm thấy thiết bị phù hợp"
+
+#: .\templates\core\equipment_list.html
+msgid "第"
+msgstr "Trang"
+
+#: .\templates\core\equipment_list.html
+msgid "页"
+msgstr "trang"
+
+#: .\templates\core\equipment_list.html
+msgid "共"
+msgstr "Tổng"
+
+#: .\templates\core\equipment_list.html
+msgid "上一页"
+msgstr "Trang trước"
+
+#: .\templates\core\equipment_list.html
+msgid "下一页"
+msgstr "Trang sau"
+
+#: .\templates\issues\patrol_list.html
+msgid "点检问题点记录"
+msgstr "Bản ghi kiểm tra vấn đề"
+
+#: .\templates\issues\patrol_list.html
+msgid "新增点检记录"
+msgstr "Thêm bản ghi kiểm tra"
+
+#: .\templates\issues\patrol_list.html
+msgid "导入Excel"
+msgstr "Nhập Excel"
+
+#: .\templates\issues\patrol_list.html
+msgid "导出Excel"
+msgstr "Xuất Excel"
+
+#: .\templates\issues\patrol_list.html
+msgid "发送邮件"
+msgstr "Gửi email"
+
+#: .\templates\issues\patrol_list.html
+msgid "日期"
+msgstr "Ngày"
+
+#: .\templates\issues\patrol_list.html
+msgid "线别"
+msgstr "Dây chuyền"
+
+#: .\templates\issues\patrol_list.html
+msgid "站别"
+msgstr "Trạm"
+
+#: .\templates\issues\patrol_list.html
+msgid "问题要改善"
+msgstr "Vấn đề cần cải thiện"
+
+#: .\templates\issues\patrol_list.html
+msgid "照片/视频"
+msgstr "Ảnh/Video"
+
+#: .\templates\issues\patrol_list.html
+msgid "OP负责人"
+msgstr "Người chịu trách nhiệm OP"
+
+#: .\templates\issues\patrol_list.html
+msgid "主管"
+msgstr "Quản lý"
+
+#: .\templates\issues\patrol_list.html
+msgid "状态"
+msgstr "Trạng thái"
+
+#: .\templates\issues\patrol_list.html
+msgid "操作"
+msgstr "Thao tác"
+
+#: .\templates\issues\patrol_list.html
+msgid "编辑"
+msgstr "Sửa"
+
+#: .\templates\issues\patrol_list.html
+msgid "删除"
+msgstr "Xóa"
+
+#: .\templates\issues\patrol_list.html
+msgid "确定删除吗？"
+msgstr "Xác nhận xóa không?"
+
+#: .\templates\issues\patrol_list.html
+msgid "发送点检问题点邮件"
+msgstr "Gửi email bản ghi kiểm tra vấn đề"
+
+#: .\templates\issues\patrol_list.html
+msgid "已勾选记录"
+msgstr "Đã chọn bản ghi"
+
+#: .\templates\issues\patrol_list.html
+msgid "条"
+msgstr "bản ghi"
+
+#: .\templates\issues\patrol_list.html
+msgid "选择邮件群组"
+msgstr "Chọn nhóm email"
+
+#: .\templates\issues\patrol_list.html
+msgid "请选择群组"
+msgstr "Vui lòng chọn nhóm"
+
+#: .\templates\issues\patrol_list.html
+msgid "新建群组"
+msgstr "Tạo nhóm mới"
+
+#: .\templates\issues\patrol_list.html
+msgid "取消"
+msgstr "Hủy"
+
+#: .\templates\issues\patrol_list.html
+msgid "保存群组"
+msgstr "Lưu nhóm"

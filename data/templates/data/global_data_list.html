@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}设备数据记录{% endblock %}
+{% block content %}
+<h2>设备数据记录（振动/CT）</h2>
+
+<a href="{% url 'data:import_data' %}" class="btn btn-primary mb-3">📤 导入CT/振动Excel</a>
+
+<table class="table">
+    <thead><tr><th>设备</th><th>类型</th><th>数值</th><th>时间</th></tr></thead>
+    <tbody>
+        {% for d in data %}
+        <tr><td>{{ d.equipment.name }}</td><td>{{ d.data_type }}</td><td>{{ d.value }} {{ d.unit }}</td><td>{{ d.record_date|date:"Y-m-d H:i" }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

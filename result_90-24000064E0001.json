@@ -1,0 +1,10 @@
+{
+  "ai_score": 75,
+  "fault_prob_next_week": 40,
+  "remaining_life_days": 365,
+  "suggestion": "加强设备巡检，重点关注振动和备件库存情况。",
+  "top_risks": [
+    "ct_deviation",
+    "maintenance_overdue"
+  ]
+}

@@ -1,0 +1,106 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-16 21:59+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+#: .\templates\base.html:60
+msgid "设备管理系统"
+msgstr ""
+
+#: .\templates\base.html:62
+msgid "设备总表"
+msgstr ""
+
+#: .\templates\base.html:63
+msgid "设计信息"
+msgstr ""
+
+#: .\templates\base.html:64
+msgid "问题点记录"
+msgstr ""
+
+#: .\templates\base.html:65
+msgid "点检问题点记录"
+msgstr ""
+
+#: .\templates\base.html:66
+msgid "备品"
+msgstr ""
+
+#: .\templates\base.html:67
+msgid "报警记录"
+msgstr ""
+
+#: .\templates\base.html:71
+msgid "保养记录"
+msgstr ""
+
+#: .\templates\base.html:74
+msgid "所有保养记录"
+msgstr ""
+
+#: .\templates\base.html:75
+msgid "保养SOP项目列表"
+msgstr ""
+
+#: .\templates\base.html:76
+msgid "今天保养执行"
+msgstr ""
+
+#: .\templates\base.html:77
+msgid "明天保养计划"
+msgstr ""
+
+#: .\templates\base.html:78
+msgid "月度保养记录"
+msgstr ""
+
+#: .\templates\base.html:82
+msgid "设备数据"
+msgstr ""
+
+#: .\templates\base.html:83
+msgid "看护人员"
+msgstr ""
+
+#: .\templates\base.html:84
+msgid "性能KPI"
+msgstr ""
+
+#: .\templates\base.html:85
+msgid "健康度看板"
+msgstr ""
+
+#: .\templates\base.html:86
+msgid "产线看板"
+msgstr ""
+
+#: .\templates\base.html:87
+msgid "全局搜索"
+msgstr ""
+
+#: .\templates\base.html:91
+msgid "用户管理"
+msgstr ""
+
+#: .\templates\base.html:109
+msgid "登出"
+msgstr ""
+
+#: .\templates\base.html:111
+msgid "登录"
+msgstr ""

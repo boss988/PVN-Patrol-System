@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}镭雕图检查 - {{ part_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>料号: <strong>{{ part_number }}</strong></h2>
+        <a href="{% url 'laser_check:search_page' %}" class="btn btn-secondary">← 返回搜索</a>
+    </div>
+
+    {% if spec_from_excel %}
+        <p><strong>Excel映射规格：</strong><span class="text-success">{{ spec_from_excel }}</span></p>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- 左侧：产品图 PDF（最终稳定版，使用 <embed>） -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white fs-5">
+                    <strong>产品图 (PDF)</strong>
+                </div>
+                <div class="card-body p-0" style="min-height: 650px;">
+                    {% if product_path and pdf_absolute_url %}
+                        <embed src="{{ pdf_absolute_url }}"
+                               type="application/pdf"
+                               width="100%"
+                               height="650px"
+                               style="border: none;">
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <h5>未找到产品图 PDF</h5>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if product_path %}
+                        <a href="{{ pdf_absolute_url }}" target="_blank" class="btn btn-primary w-100">
+                            📄 在新标签页打开 PDF
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：镭雕图 .ezd -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark fs-5">
+                    <strong>镭雕图 (.ezd)</strong>
+                </div>
+                <div class="card-body p-0" style="min-height: 650px; background: #f8f9fa;">
+                    {% if laser_path %}
+                        <div class="text-center py-5">
+                            <h5 class="text-warning">✅ .ezd 文件已找到</h5>
+                            <p class="text-muted mb-3">
+                                网页暂不支持直接预览镭雕图<br>
+                                请点击下方按钮下载后，用 <strong>EzCAD2</strong> 打开完整检查参数
+                            </p>
+                            <div class="mb-4">
+                                <img src="https://via.placeholder.com/420x280/ffc107/212529?text=.EZD+%E9%93%AD%E9%9B%95%E5%9B%BE%E6%A1%A3"
+                                     style="max-width:85%; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <h5>未找到镭雕图 .ezd</h5>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if laser_path %}
+                        <a href="{% url 'laser_check:serve_file' 'ezd' laser_relative_path %}"
+                           class="btn btn-warning w-100 text-dark">
+                            📥 下载 .ezd （用 EzCAD 打开对比）
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

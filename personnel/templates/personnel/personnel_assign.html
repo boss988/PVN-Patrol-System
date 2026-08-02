@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}分配看护人员{% endblock %}
+{% block content %}
+<h2>分配看护人员</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label>设备</label>
+        <select name="equipment" class="form-control" required>
+            {% for e in equipments %}
+            <option value="{{ e.id }}">{{ e.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>看护人员</label>
+        <select name="user" class="form-control" required>
+            {% for u in users %}
+            <option value="{{ u.id }}">{{ u.username }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>开始日期</label>
+        <input type="date" name="start_date" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>看护时长(月)</label>
+        <input type="number" name="equip_duration" class="form-control" value="6" required>
+    </div>
+    <div class="mb-3">
+        <label>可处理异常技能</label>
+        <textarea name="skills_list" class="form-control" rows="2"></textarea>
+    </div>
+    <div class="mb-3">
+        <label>培训记录</label>
+        <textarea name="training_history" class="form-control" rows="2"></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">👤 保存分配</button>
+</form>
+{% endblock %}

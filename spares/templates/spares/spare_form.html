@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}新增备品{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-success text-white">
+            <h4>新增备品 - {{ equipment.name }} ({{ equipment.code }})</h4>
+        </div>
+        <div class="card-body p-5">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">备品名称</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">规格</label>
+                        <input type="text" name="spec" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">品牌</label>
+                        <input type="text" name="supplier" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">庫存數量</label>
+                        <input type="number" name="stock_qty" class="form-control" value="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">安全庫存</label>
+                        <input type="number" name="min_stock" class="form-control" value="5">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">當站使用數量</label>
+                        <input type="number" name="usage_qty" class="form-control" value="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">使用壽命(月)</label>
+                        <input type="number" name="life_months" class="form-control" value="30">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">差異</label>
+                        <input type="number" name="difference" class="form-control" value="0">
+                    </div>
+
+                    <!-- 照片上传 -->
+                    <div class="col-12">
+                        <label class="form-label">备品照片（可多选）</label>
+                        <input type="file" id="photoInput" name="photos" class="form-control" accept="image/*" multiple>
+                        <div id="previewArea" class="mt-3 d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success">保存备品</button>
+                    <a href="{% url 'spares:spares_list' equipment.pk %}" class="btn btn-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const preview = document.getElementById('previewArea');
+    preview.innerHTML = '';
+    Array.from(e.target.files).forEach(file => {
+        const url = URL.createObjectURL(file);
+        const div = document.createElement('div');
+        div.style.margin = '5px';
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.maxWidth = '160px';
+        img.style.maxHeight = '120px';
+        img.style.borderRadius = '6px';
+        div.appendChild(img);
+        preview.appendChild(div);
+    });
+});
+</script>
+{% endblock %}

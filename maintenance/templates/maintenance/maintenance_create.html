@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}新建保养记录{% endblock %}
+{% block content %}
+<h2>新建保养记录</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label>设备</label>
+        <select name="equipment" class="form-control" required>
+            {% for e in equipments %}
+            <option value="{{ e.id }}">{{ e.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>保养类型</label>
+        <select name="maintenance_type" class="form-control" required>
+            <option value="daily">日常保养</option>
+            <option value="weekly">周保养</option>
+            <option value="monthly">月保养</option>
+            <option value="quarterly">季度保养</option>
+            <option value="yearly">年度保养</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>保养内容</label>
+        <textarea name="desc" class="form-control" rows="3" required></textarea>
+    </div>
+    <div class="mb-3">
+        <label>保养日期</label>
+        <input type="date" name="maintenance_date" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>下次到期日期</label>
+        <input type="date" name="next_due_date" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">✅ 保存保养记录</button>
+</form>
+{% endblock %}

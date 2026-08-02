@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}路径设置 - 镭雕图检查工具{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>⚙️ 路径设置</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">产品图文件夹路径</label>
+            <input type="text" name="product_folder" class="form-control"
+                   value="{{ config.product_folder }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">镭雕图文件夹路径</label>
+            <input type="text" name="laser_folder" class="form-control"
+                   value="{{ config.laser_folder }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Excel映射文件 <span class="text-danger">*</span></label>
+            <input type="text" name="mapping_excel" class="form-control"
+                   value="{{ config.mapping_excel }}" required>
+            <div class="form-text text-muted">
+                必须是<strong>完整文件路径</strong>，例如：<br>
+                <code>E:\镭雕\2026 NEW LASER\ROS laser list.xlsx</code>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">保存设置</button>
+    </form>
+</div>
+{% endblock %}

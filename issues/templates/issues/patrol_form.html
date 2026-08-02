@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}{% if edit %}编辑Chỉnh sửa{% else %}新增Thêm mới{% endif %}技术部巡线问题点记录Ghi chép vấn đề điểm kiểm{% endblock %}
+
+{% block content %}
+<h2>{% if edit %}编辑Chỉnh sửa{% else %}新增Thêm mới{% endif %}技术部巡线问题点记录Ghi chép vấn đề điểm kiểm</h2>
+
+<form method="post" enctype="multipart/form-data" id="patrolForm">
+    {% csrf_token %}
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">日期Ngày</label>
+            <input type="date" name="date" class="form-control"
+                   value="{% if issue %}{{ issue.date|date:'Y-m-d' }}{% endif %}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">线别Tuyến / Dây chuyền</label>
+            <input type="text" name="line" class="form-control" value="{% if issue %}{{ issue.line }}{% endif %}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">站别Trạm</label>
+            <input type="text" name="station" class="form-control" value="{% if issue %}{{ issue.station }}{% endif %}">
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">待改善问题点Vấn đề cần cải thiện</label>
+        <textarea name="problem_desc" class="form-control" rows="4" required>{% if issue %}{{ issue.problem_desc }}{% endif %}</textarea>
+    </div>
+
+    <!-- 照片/视频上传 + 实时预览 -->
+    <div class="mb-4">
+        <label class="form-label">照片/视频（可多选）Ảnh / Video (có thể chọn nhiều)</label>
+        <input type="file" id="photoInput" name="photos" class="form-control" accept="image/*,video/*" multiple>
+
+        <!-- 实时预览 -->
+        <div id="previewArea" class="mt-3 d-flex flex-wrap gap-2"></div>
+
+        <!-- 已保存的照片/视频（加强版：视频必须显示 + 红X） -->
+        {% if issue and issue.photos and issue.photos|length > 0 %}
+            <div class="mt-3">
+                <small class="text-muted">已保存的照片/视频：Ảnh / Video đã lưu</small>
+                <div class="d-flex flex-wrap gap-3">
+                    {% for url in issue.photos %}
+                        <div class="position-relative" style="display:inline-block; margin:4px;">
+                            {% if url|lower|slice:"-5:" in '.mp4 .mkv .mov .avi .webm' or url|lower|slice:"-4:" in '.mp4.mkv.mov.avi' %}
+                                <!-- 视频 -->
+                                <video width="180" height="130" controls style="border-radius:6px; border:2px solid #ddd;">
+                                    <source src="{{ url }}" type="video/mp4">
+                                    您的浏览器不支持视频标签Trình duyệt của bạn không hỗ trợ thẻ video
+                                </video>
+                            {% else %}
+                                <!-- 图片 -->
+                                <img src="{{ url }}" style="max-width:180px; max-height:130px; border-radius:6px; border:2px solid #ddd;">
+                            {% endif %}
+                            <!-- 红X 删除按钮 -->
+                            <button type="button" onclick="deletePhoto(this, '{{ url }}')"
+                                    class="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                    style="width:34px; height:34px; padding:0; border-radius:50%; font-size:18px; z-index:20; box-shadow:0 3px 8px rgba(0,0,0,0.4);">
+                                ✕
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 隐藏字段：记录要删除的URL -->
+    <input type="hidden" name="photos_to_delete" id="photos_to_delete" value="">
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">越南负责人Người phụ trách Việt Nam（OP）</label>
+            <input type="text" name="op_responsible" class="form-control" value="{% if issue %}{{ issue.op_responsible }}{% endif %}">
+        </div>
+
+        <!-- ==================== 责任单位主管（下拉选择框） ==================== -->
+        <div class="col-md-6">
+            <label class="form-label">责任单位主管Trưởng đơn vị chịu trách nhiệm</label>
+            <select name="supervisor" class="form-control" required>
+                <option value="">-- 请选择主管 --</option>
+
+                {% for sup in supervisor_choices %}
+                    <option value="{{ sup }}"
+                            {% if issue and issue.supervisor == sup %}selected{% endif %}>
+                        {{ sup }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">情况Tình trạng</label>
+        <select name="status" class="form-control">
+            <option value="Open" {% if issue and issue.status == 'Open' %}selected{% endif %}>Open</option>
+            <option value="Closed" {% if issue and issue.status == 'Closed' %}selected{% endif %}>Closed</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">✅ 保存</button>
+    <a href="{% url 'issues:patrol_list' %}" class="btn btn-secondary">取消</a>
+</form>
+
+<script>
+    // 实时预览（你原来的代码）
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+        const previewArea = document.getElementById('previewArea');
+        previewArea.innerHTML = '';
+        Array.from(e.target.files).forEach(file => {
+            const url = URL.createObjectURL(file);
+            const div = document.createElement('div');
+            div.style.display = 'inline-block';
+            div.style.margin = '4px';
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.maxWidth = '180px';
+                img.style.maxHeight = '130px';
+                img.style.borderRadius = '6px';
+                div.appendChild(img);
+            } else if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.src = url;
+                video.controls = true;
+                video.style.maxWidth = '180px';
+                video.style.maxHeight = '130px';
+                video.style.borderRadius = '6px';
+                div.appendChild(video);
+            }
+            previewArea.appendChild(div);
+        });
+    });
+
+    // 删除已保存的照片/视频（图片和视频都支持）
+    let toDelete = [];
+    function deletePhoto(btn, url) {
+        if (confirm('确定删除这张照片/视频吗？保存后才会真正生效！')) {
+            toDelete.push(url);
+            document.getElementById('photos_to_delete').value = toDelete.join(',');
+            btn.parentElement.remove();
+        }
+    }
+</script>
+{% endblock %}

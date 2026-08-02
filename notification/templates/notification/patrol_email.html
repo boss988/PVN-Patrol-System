@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 30px;
+            line-height: 1.8;
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 25px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 16px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        td {
+            font-size: 15px;
+        }
+        img {
+            max-width: 580px;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            margin: 8px auto;
+            border: 1px solid #ddd;
+        }
+        .photo-cell {
+            text-align: center;
+            width: 600px;
+        }
+        .header {
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .footer {
+            color: #555;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h2 class="header">📋 点检问题点记录通知</h2>
+    <p><strong>发送时间：</strong>刚刚 &nbsp;&nbsp;&nbsp; 共 {{ issues|length }} 条记录</p>
+
+    <table>
+        <tr>
+            <th>日期</th>
+            <th>线别</th>
+            <th>站别</th>
+            <th>问题要改善</th>
+            <th>照片</th>
+            <th>OP负责人</th>
+            <th>主管</th>
+            <th>状态</th>
+        </tr>
+        {% for issue in issues %}
+        <tr>
+            <td>{{ issue.date }}</td>
+            <td>{{ issue.line }}</td>
+            <td>{{ issue.station }}</td>
+            <td>{{ issue.problem_desc }}</td>
+            <td class="photo-cell">
+                {% if issue.photos and issue.photos|length > 0 %}
+                    {% for url in issue.photos %}
+                        <a href="{{ site_url }}{{ url }}" target="_blank">
+                            <img src="{{ site_url }}{{ url }}" alt="照片">
+                        </a>
+                    {% endfor %}
+                {% elif issue.photo %}
+                    <a href="{{ site_url }}{{ issue.photo.url }}" target="_blank">
+                        <img src="{{ site_url }}{{ issue.photo.url }}" alt="照片">
+                    </a>
+                {% else %}
+                    无照片
+                {% endif %}
+            </td>
+            <td>{{ issue.op_responsible|default:"-" }}</td>
+            <td>{{ issue.supervisor|default:"-" }}</td>
+            <td><strong>{{ issue.status }}</strong></td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <p class="footer">
+        👉 点击上方照片可查看大图<br>
+        👉 视频请点击下方链接进入系统查看
+    </p>
+</body>
+</html>

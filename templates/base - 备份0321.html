@@ -1,0 +1,96 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}非标设备健康度管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.dateinput').datepicker({
+                format: 'yyyy-mm-dd',
+                autoclose: true
+            });
+        });
+    </script>
+    <style>
+        .marquee {
+            background: #dc3545;
+            color: white;
+            padding: 10px 0;
+            font-size: 17px;
+            overflow: hidden;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .marquee-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 30s linear infinite;
+        }
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-100%); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'core:equipment_list' %}">设备管理系统</a>
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:equipment_list' %}">设备总表</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'design:global_design_list' %}">设计信息</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'issues:global_issues_list' %}">问题点记录</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'spares:global_spares_list' %}">备品</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'alerts:global_alerts_list' %}">报警记录</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'maintenance:global_maintenance_list' %}">保养记录</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'data:global_data_list' %}">设备数据</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'personnel:global_personnel_list' %}">看护人员</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'performance:global_performance_list' %}">性能KPI</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard' %}">健康度看板</a></li>
+                {% if user.is_authenticated %}
+                <li class="nav-item"><a class="nav-link" href="#">{{ user.username }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">登出</a></li>
+                {% else %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">登录</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- ==================== 全站跑马灯 ==================== -->
+    <div class="marquee">
+        <div class="marquee-content" id="marquee-content">
+            🚨 系统运行正常 | Top风险设备：暂无 | 最新保养记录：等待更新 | 红灯报警：0条未处理 | 健康度平均：85分
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+    <!-- 跑马灯动态刷新脚本 -->
+    <script>
+        function updateMarquee() {
+            const messages = [
+                "🚨 Top风险设备：TDM对位 (72分)",
+                "✅ VŨ VĂN THÚY 刚刚完成 Thermal Moulde 日保",
+                "🔴 红灯报警：2条未处理 (Assy Interposers)",
+                "📊 当前系统健康度平均：85.2分"
+            ];
+            const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+            document.getElementById('marquee-content').innerHTML = randomMsg + " | " + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+        }
+        setInterval(updateMarquee, 10000);
+        updateMarquee();
+    </script>
+</body>
+</html>

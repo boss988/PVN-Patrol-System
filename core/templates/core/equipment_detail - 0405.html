@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}设备详情 - {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="background:#f8f9fa; min-height:100vh;">
+
+    <h2 class="text-center mb-4">{{ equipment.name }}（{{ equipment.code }}）</h2>
+    <p class="text-center text-muted mb-5">
+        {{ equipment.line|default:'' }} / {{ equipment.station|default:'-' }} / {{ equipment.eq_type|default:'-' }}
+    </p>
+
+    <!-- 大圆（整体健康度） -->
+    <div class="text-center mb-5">
+        <div style="position:relative; width:360px; height:360px; margin:0 auto;">
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);
+                        width:360px; height:360px; border-radius:50%;
+                        background:conic-gradient(#28a745 {{ equipment.health_score }}%, #dc3545 {{ 100 - equipment.health_score }}%);
+                        display:flex; align-items:center; justify-content:center;
+                        font-size:110px; font-weight:bold; color:white; box-shadow:0 30px 70px rgba(0,0,0,0.4);">
+                {{ equipment.health_score }}
+            </div>
+            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, 85px); color:#007bff; font-size:22px;">
+                整体健康度
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 龙虾AI预测按钮（醒目位置） ==================== -->
+    <div class="text-center mb-5">
+        <a href="{% url 'core:equipment_ai_predict' equipment.pk %}"
+           class="btn btn-danger btn-lg shadow-lg px-5 py-3 fs-4"
+           onclick="return confirm('确定要启动龙虾AI对 {{ equipment.name }} 进行预测吗？\n\n这将调用Qwen2.5:7B模型，可能需要30-60秒。')">
+            🚀 龙虾AI预测
+        </a>
+        <p class="text-muted mt-2 small">使用 Qwen2.5:7B 模型进行智能健康度预测</p>
+    </div>
+
+    <!-- 8个模块圆圈（Bootstrap grid版，点击可靠） -->
+    <div class="row justify-content-center g-4" style="max-width:900px; margin:0 auto;">
+
+        <!-- 1. 人员 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'personnel:global_personnel_list' %}?equipment_pk={{ equipment.pk }}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>人员</h6>
+                    <h3 class="fw-bold">{{ equipment.personnel_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+        <!-- 2. 性能 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'performance:global_performance_list' %}?equipment_pk={{ equipment.pk }}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>性能</h6>
+                    <h3 class="fw-bold">{{ equipment.performance_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+        <!-- 3. 设计 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'design:global_design_list' %}?equipment_id={{ equipment.pk }}" class="text-decoration-none">
+              <div class="card text-center shadow-sm border-0 rounded-circle mx-auto"
+                   style="width:160px;height:160px;background:{% if equipment.design_score|default:100 < 30 %}#ef4444{% else %}#28a745{% endif %};color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                <h6>设计</h6>
+                <h3 class="fw-bold">{{ equipment.design_score|default:100 }} 分</h3>
+              </div>
+           </a>
+        </div>
+
+        <!-- 4. 问题点 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'issues:issues_list' equipment.pk %}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>问题点</h6>
+                    <h3 class="fw-bold">{{ equipment.issues_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+        <!-- 5. 报警 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'alerts:global_alerts_list' %}?equipment_pk={{ equipment.pk }}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>报警</h6>
+                    <h3 class="fw-bold">{{ equipment.alerts_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+        <!-- 6. 备品 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'spares:spares_list' equipment.pk %}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>备品</h6>
+                    <h3 class="fw-bold">{{ equipment.spares_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+        <!-- 7. 保养 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'maintenance:global_maintenance_list' %}?equipment_pk={{ equipment.pk }}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>保养</h6>
+                    <h3 class="fw-bold">{{ equipment.maintenance_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+        <!-- 8. 数据 -->
+        <div class="col-md-3 col-sm-6 text-center">
+            <a href="{% url 'data:global_data_list' %}?equipment_pk={{ equipment.pk }}" class="text-decoration-none">
+                <div class="card text-center shadow-sm border-0 rounded-circle mx-auto" style="width:160px;height:160px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                    <h6>数据</h6>
+                    <h3 class="fw-bold">{{ equipment.data_score|default:100 }} 分</h3>
+                </div>
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .card:hover {
+        transform: scale(1.08);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.25) !important;
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}

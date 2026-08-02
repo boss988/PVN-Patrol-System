@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}新增SOP项目{% endblock %}
+{% block content %}
+<h2>新增保养SOP项目</h2>
+
+<!-- 7字段搜索栏 -->
+<div class="mb-4 border p-3 bg-light">
+    <h5>🔍 先搜索并选中设备（RFID扫码优先）</h5>
+    <form method="get">
+        <div class="row g-3">
+            <div class="col-md-2"><label>ID</label>{{ form.id_search }}</div>
+            <div class="col-md-2"><label>设备名称</label>{{ form.name }}</div>
+            <div class="col-md-2"><label>厂别</label>{{ form.area }}</div>
+            <div class="col-md-2"><label>线别</label>{{ form.line }}</div>
+            <div class="col-md-2"><label>机种名称</label>{{ form.model_type }}</div>
+            <div class="col-md-2"><label>设备状态</label>{{ form.status }}</div>
+            <div class="col-md-2"><label>站别</label>{{ form.station }}</div>
+            <div class="col-md-2 mt-4">
+                <button type="submit" class="btn btn-primary w-100">🔍 搜索设备</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 已选中设备提示 -->
+{% if equipment %}
+<div class="alert alert-success">
+    ✅ 已选中设备：{{ equipment.name }} (ID: {{ equipment.code }} | RFID: {{ equipment.rfid_card|default:"-" }})
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if equipment %}
+    <input type="hidden" name="equipment_id" value="{{ equipment.id }}">
+    {% endif %}
+
+    <div class="mb-3">
+        <label>SOP项目名称</label>
+        <input type="text" name="name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>保养类别</label>
+        <select name="category" class="form-control" required>
+            <option value="daily">日常</option>
+            <option value="weekly">周</option>
+            <option value="monthly">月</option>
+            <option value="quarterly">季</option>
+            <option value="half_year">半年</option>
+        </select>
+    </div>
+
+    <!-- 起子头和吸盘检查周期 -->
+    <div class="row">
+        <div class="col-md-6">
+            <label>起子头检查周期（天）</label>
+            <input type="number" name="bit_life_days" class="form-control" placeholder="例如 30" value="30">
+        </div>
+        <div class="col-md-6">
+            <label>吸盘检查周期（天）</label>
+            <input type="number" name="suction_life_days" class="form-control" placeholder="例如 15" value="15">
+        </div>
+    </div>
+
+    <div class="mb-3 form-check">
+        <input type="checkbox" name="is_numeric" class="form-check-input">
+        <label>需要输入数值（上下限）</label>
+    </div>
+    <div class="row">
+        <div class="col"><input type="number" name="lower_limit" placeholder="下限" class="form-control"></div>
+        <div class="col"><input type="number" name="upper_limit" placeholder="上限" class="form-control"></div>
+        <div class="col"><input type="text" name="unit" placeholder="单位" class="form-control"></div>
+    </div>
+    <div class="mb-3">
+        <label>负责人单位</label>
+        <input type="text" name="responsible_unit" class="form-control">
+    </div>
+
+    <!-- 照片/文档上传 -->
+    <div class="mb-3">
+        <label>SOP照片/文档</label>
+        <input type="file" name="sop_document" class="form-control">
+    </div>
+
+    <button type="submit" class="btn btn-success">✅ 保存SOP</button>
+</form>
+{% endblock %}

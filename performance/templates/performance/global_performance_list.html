@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}设备性能KPI{% endblock %}
+{% block content %}
+<h2>设备性能KPI仪表盘 (MTBF/MTTR/OEE)</h2>
+
+<!-- 新建按钮在这里！ -->
+<a href="{% url 'performance:performance_create' %}" class="btn btn-primary mb-3">➕ 手动添加KPI数据</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>计算日期</th>
+            <th>MTBF(小时)</th>
+            <th>MTTR(小时)</th>
+            <th>OEE(%)</th>
+            <th>KPI评分</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for k in kpis %}
+        <tr>
+            <td>{{ k.equipment.name }}</td>
+            <td>{{ k.calc_date }}</td>
+            <td>{{ k.mtbf }}</td>
+            <td>{{ k.mttr }}</td>
+            <td>{{ k.oee }}</td>
+            <td class="text-success">{{ k.kpi_score }} 分</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not kpis %}
+<p class="text-muted">暂无KPI数据（点击上面按钮手动添加）</p>
+{% endif %}
+{% endblock %}

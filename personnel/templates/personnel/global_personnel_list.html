@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}设备看护人员{% endblock %}
+{% block content %}
+<h2>设备看护人员列表</h2>
+
+<a href="{% url 'personnel:personnel_assign' %}" class="btn btn-primary mb-3">👤 分配/编辑看护人员</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>看护人员</th>
+            <th>开始日期</th>
+            <th>看护时长(月)</th>
+            <th>技能</th>
+            <th>经验评分</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in personnel %}
+        <tr>
+            <td>{{ p.equipment.name }}</td>
+            <td>{{ p.user.username }}</td>
+            <td>{{ p.start_date }}</td>
+            <td>{{ p.equip_duration }}</td>
+            <td>{{ p.skills_list|truncatewords:5 }}</td>
+            <td class="text-success">{{ p.experience_score }} 分</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

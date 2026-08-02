@@ -1,0 +1,219 @@
+{% load static %}
+{% load i18n %}
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}PVN三厂技术部网页系统{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+<!--    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>-->
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>-->
+   <script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/bootstrap-datepicker.min.css' %}"><script src="{% static 'js/bootstrap-datepicker.min.js' %}"></script>
+   <script src="{% static 'js/chart.umd.min.js' %}"></script>
+    <script>
+        $(document).ready(function() {
+            $('.dateinput').datepicker({
+                format: 'yyyy-mm-dd',
+                autoclose: true
+            });
+        });
+    </script>
+    <style>
+        .marquee {
+            background: #dc3545;
+            color: white;
+            padding: 10px 0;
+            font-size: 17px;
+            overflow: hidden;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .marquee-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 30s linear infinite;
+        }
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-100%); }
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .license-warning {
+            background: #d32f2f;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'core:equipment_list' %}">{% trans "PVN三厂技术部网页系统" %}</a>
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:equipment_list' %}">{% trans "三厂设备总表" %}</a></li>
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'design:global_design_list' %}">{% trans "设计信息" %}</a></li>-->
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'laser_check:search_page' %}">镭雕图检查</a></li>-->
+                <!-- 设计信息 + 镭雕图检查（子菜单） -->
+                <li class="nav-item dropdown">
+                   <a class="nav-link dropdown-toggle" href="#" id="designDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                     {% trans "设计信息" %}
+                    </a>
+                   <ul class="dropdown-menu" aria-labelledby="designDropdown">
+                   <li><a class="dropdown-item" href="{% url 'design:global_design_list' %}">{% trans "设计信息" %}</a></li>
+                   <li><a class="dropdown-item" href="{% url 'laser_check:search_page' %}">镭雕图检查</a></li>
+                       <!-- 新增：文件临时共享中心 -->
+                   <li><a class="dropdown-item" href="{% url 'design:file_share_center' %}">文件临时共享中心Chia sẻ file tạm thời</a></li>
+<!--                    <li><a class="dropdown-item" href="{% url 'patrol_analytics:dashboard' %}">📊 点检问题汇总看板</a></li>-->
+                   </ul>
+                </li>
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'issues:global_issues_list' %}">{% trans "问题点记录" %}</a></li>-->
+                    <!-- ==================== 点检管理下拉菜单（把两个功能合并在一起） ==================== -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="patrolDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        📊 技术部巡线管理Quản lý điểm kiểm
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="patrolDropdown">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'issues:patrol_list' %}">
+                                📋 技术部巡线问题点记录Ghi chép vấn đề điểm kiểm
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'patrol_analytics:dashboard' %}">
+                                📊 技术部巡线问题点看板Bảng tổng hợp vấn đề điểm kiểm
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+
+
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'spares:global_spares_list' %}">{% trans "备品" %}</a></li>-->
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'alerts:global_alerts_list' %}">{% trans "报警记录" %}</a></li>-->
+
+<!--                <li class="nav-item dropdown">-->
+<!--                    <a class="nav-link dropdown-toggle" href="#" id="maintenanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">-->
+<!--                        {% trans "保养记录" %}-->
+<!--                    </a>-->
+<!--                    <ul class="dropdown-menu" aria-labelledby="maintenanceDropdown">-->
+<!--                        <li><a class="dropdown-item" href="{% url 'maintenance:global_maintenance_list' %}">{% trans "所有保养记录" %}</a></li>-->
+<!--                        <li><a class="dropdown-item" href="{% url 'maintenance:global_sop_list' %}">{% trans "保养SOP项目列表" %}</a></li>-->
+<!--                        <li><a class="dropdown-item" href="{% url 'maintenance:today_maintenance_execute' %}">{% trans "今天保养执行" %}</a></li>-->
+<!--                        <li><a class="dropdown-item" href="{% url 'maintenance:tomorrow_maintenance_plan' %}">{% trans "明天保养计划" %}</a></li>-->
+<!--                        <li><a class="dropdown-item" href="{% url 'maintenance:monthly_maintenance_record' %}">{% trans "月度保养记录" %}</a></li>-->
+<!--                    </ul>-->
+<!--                </li>-->
+
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'data:global_data_list' %}">{% trans "设备数据" %}</a></li>-->
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'personnel:global_personnel_list' %}">{% trans "看护人员" %}</a></li>-->
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'performance:global_performance_list' %}">{% trans "性能KPI" %}</a></li>-->
+                <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard' %}">{% trans "健康度看板" %}</a></li>
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'production:production_line' %}">{% trans "产线看板" %}</a></li>-->
+<!--                <li class="nav-item"><a class="nav-link" href="{% url 'search:global_search' %}">{% trans "全局搜索" %}</a></li>-->
+<!--                <li class="nav-item">-->
+<!--                   <a class="nav-link" href="/ai-assistant/">龙虾AI</a>-->
+                </li>
+
+                {% if user.is_authenticated and user.profile and user.profile.role == 'admin' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'users:user_list' %}">{% trans "用户管理" %}</a>
+                </li>
+                {% endif %}
+
+                <!-- 语言切换（使用表单方式，正确支持 Django set_language） -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown">
+                        🌐 {{ request.LANGUAGE_CODE|upper }}
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+                        <li>
+                            <form action="{% url 'set_language' %}" method="post" style="margin:0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="language" value="zh-hans">
+                                <button type="submit" class="dropdown-item">🇨🇳 中文</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form action="{% url 'set_language' %}" method="post" style="margin:0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="language" value="vi">
+                                <button type="submit" class="dropdown-item">🇻🇳 Tiếng Việt</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form action="{% url 'set_language' %}" method="post" style="margin:0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="language" value="en">
+                                <button type="submit" class="dropdown-item">🇬🇧 English</button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+
+
+
+                {% if user.is_authenticated %}
+                <li class="nav-item"><a class="nav-link" href="#">{{ user.username }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">{% trans "登出" %}</a></li>
+                {% else %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">{% trans "登录" %}</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 全站跑马灯 -->
+    <div class="marquee">
+        <div class="marquee-content" id="marquee-content">
+            🚨 系统运行正常 | 等待最新保养记录...
+        </div>
+    </div>
+
+    <div class="container-fluid mt-1">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+    <!-- 跑马灯动态刷新脚本 -->
+        <!-- ==================== 跑马灯动态刷新脚本（只显示最新一条记录） ==================== -->
+    <script>
+        function updateMarquee() {
+            const timestamp = new Date().getTime();
+            fetch(`/static/maintenance_log.txt?t=${timestamp}`)
+                .then(response => response.text())
+                .then(text => {
+                    const lines = text.trim().split('\n').filter(line => line.trim() !== '');
+
+                    let msg;
+                    if (lines.length > 0) {
+                        // 只取最后一行（最新记录）
+                        msg = lines[lines.length - 1];
+                    } else {
+                        // 没有记录时显示默认等待信息
+                        msg = '系统运行正常 | 等待最新保养记录...';
+                    }
+
+                    document.getElementById('marquee-content').innerHTML = '🚨 ' + msg;
+                })
+                .catch(() => {
+                    document.getElementById('marquee-content').innerHTML = '🚨 系统运行正常 | 等待最新保养记录...';
+                });
+        }
+        setInterval(updateMarquee, 8000);   // 每8秒刷新一次
+        updateMarquee();                    // 页面加载时立即执行一次
+    </script>
+</body>
+</html>

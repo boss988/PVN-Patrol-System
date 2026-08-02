@@ -1,0 +1,846 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}点检问题汇总看板{% endblock %}
+
+<style>
+    /* ==================== 小计行黄色 ==================== */
+    tr.total-row,
+    tr.total-row td {
+        background-color: #ffeaa7 !important;
+        font-weight: bold !important;
+    }
+
+    /* ==================== 表格紧凑设置（最高优先级尝试） ==================== */
+    #matrixTable.table,
+    #matrixTable.table-bordered,
+    #matrixTable,
+    #matrixTable thead th,
+    #matrixTable tbody td {
+        font-size: 13px !important;
+        padding: 4px 3px !important;
+        line-height: 1.15 !important;
+    }
+
+    .matrix-input {
+        height: 28px !important;
+        font-size: 13px !important;
+        padding: 2px 4px !important;
+    }
+
+
+
+
+
+
+
+
+
+
+
+</style>
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">📊 点检问题汇总看板</h2>
+
+    <!-- 日期筛选 + 保存按钮 -->
+    <div class="card mb-4">
+        <div class="card-body d-flex justify-content-between align-items-end">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-3">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 mt-4">🔍 查询</button>
+                </div>
+            </form>
+
+            {% if user.username in patrol_edit_users %}
+            <button onclick="saveToFile()" class="btn btn-success btn-lg">
+                💾 保存当前数据
+            </button>
+            {% else %}
+
+            </button>
+            {% endif %}
+
+
+        </div>
+    </div>
+
+    <!-- ==================== 你提供的完整手动输入表格 ==================== -->
+    <!-- ==================== 点检问题汇总表（手动填写） ==================== -->
+    <div class="card shadow-sm mb-5">
+        <div class="card-header fw-bold bg-dark text-white">点检问题汇总表（手动填写）</div>
+        <div class="card-body p-0 table-responsive" style="max-height: 680px; overflow-y: auto;">
+
+            <table id="matrixTable" class="table table-bordered text-center align-middle"
+                   style="font-size: 15px;              /* ←←←【改这里】整体文字大小（推荐14-16px） */
+                      line-height: 1.5;             /* ←←←【改这里】文字高度 / 行距 */
+                      border-collapse: collapse;
+                      table-layout: fixed;          /* 固定布局，让宽度更精确 */
+                      width: 100%;">
+
+                <thead class="table-light" style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
+                <tr style="height: 48px;">                               <!-- ←←←【改这里】表头行高 -->
+                    <th rowspan="2" style="width: 75px;">机种</th>       <!-- ←←← 机种列宽度 -->
+                    <th rowspan="2" style="width: 110px;">类别</th>      <!-- ←←← 类别列宽度 -->
+                    <th rowspan="2" style="width: 85px;">线别</th>       <!-- ←←← 线别列宽度 -->
+                    <th rowspan="2" style="width: 185px;">工程师</th>    <!-- ←←← 工程师列宽度 -->
+                    <th rowspan="2" style="width: 195px;">主管</th>      <!-- ←←← 主管列宽度 -->
+
+                    {% for d in date_range %}
+                    <th style="min-width: 68px; padding: 8px 4px;">      <!-- ←←←【改这里】每个日期列宽度 -->
+                        {{ d|date:'m/d' }}
+                    </th>
+                    {% endfor %}
+                </tr>
+                </thead>
+
+                <tbody>
+                <!-- BnC Auto -->
+                <tr>
+                    <td rowspan="6">BnC</td>
+                    <td rowspan="6">Auto</td>
+                    <td>AB02</td>
+                    <td>Nero Lian(连鑫_PVN)</td>
+                    <td rowspan="6">Wind Wang(王海风_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="AB02" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>C02</td>
+                    <td>Liang-yong Xia(夏良勇_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="C02" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>BB02</td>
+                    <td>Clover8 Zhang(张训富_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="BB02" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>pack01</td>
+                    <td>Havana Hien(ĐỖ THỊ THU HIỀN_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="pack01" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>pack02</td>
+                    <td>Havana Hien(ĐỖ THỊ THU HIỀN_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="pack02" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>C01</td>
+                    <td>JI Xian li 李季贤 (PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="C01" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+
+                <!-- 加上 Total 行（每组主管结束后加一行） -->
+                <!-- Wind Wang 的 Total 行 -->
+                <!-- Wind Wang 的小计行 -->
+                <tr class="total-row">
+                    <td colspan="4" style="text-align:right;">小计 (Wind Wang)</td>
+                    <td></td>
+                    {% for d in date_range %}
+                    <td class="total-cell" data-supervisor="Wind Wang"></td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Pro -->
+                <tr>
+                    <td rowspan="4">Pro</td>
+                    <td rowspan="4">Pro</td>
+                    <td>BB01</td>
+                    <td>Meng-lin Wang(王孟林_PVN)</td>
+                    <td rowspan="4">Xh Li(李興恒_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="BB01" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>BB02</td>
+                    <td>Bin-Hua Wu(吴寶華_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="BB02" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>BB03</td>
+                    <td>Wind8 Yang(楊帥_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="BB03" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>pack</td>
+                    <td>NAM AN(ÂN NAM_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="pack" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Xh Li 的 Total 行 -->
+                <!-- Xh Li 的小计行 -->
+                <tr class="total-row">
+                    <td colspan="4" style="text-align:right;">小计 (Xh Li)</td>
+                    <td></td>
+                    {% for d in date_range %}
+                    <td class="total-cell" data-supervisor="Xh Li"></td>
+                    {% endfor %}
+                </tr>
+                <!-- BNC manual -->
+                <tr>
+                    <td rowspan="2">BNC</td>
+                    <td rowspan="2">manual</td>
+                    <td>AB01</td>
+                    <td>Ken1 Vu(VŨ TRỌNG QUÝ_PVN)</td>
+                    <td rowspan="2">Zheng-ping Liu(劉正平_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="AB01" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>BB01</td>
+                    <td>Ken1 Vu(VŨ TRỌNG QUÝ_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="BB01" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <!-- Zheng-ping Liu 的 Total 行 -->
+                <!-- Zheng-ping Liu 的小计行 -->
+                <tr class="total-row">
+                    <td colspan="4" style="text-align:right;">小计 (Zheng-ping Liu)</td>
+                    <td></td>
+                    {% for d in date_range %}
+                    <td class="total-cell" data-supervisor="Zheng-ping Liu"></td>
+                    {% endfor %}
+                </tr>
+                <!-- FE ALL -->
+                <tr>
+                    <td rowspan="3">FE</td>
+                    <td rowspan="3">ALL</td>
+                    <td>PRO</td>
+                    <td></td>
+                    <td rowspan="3">Guang-hua Peng(彭光華_PVN)</td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="PRO" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>BNC</td>
+                    <td></td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="BNC" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>PACKING</td>
+                    <td></td>
+                    {% for d in date_range %}
+                    <td><input type="number" class="form-control text-center matrix-input" data-line="PACKING" value="0"
+                               style="width:65px;margin:0 auto;display:block;"></td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Guang-hua Peng 的 Total 行 -->
+                <tr class="total-row">
+                    <td colspan="4" style="text-align:right;">小计 (Guang-hua Peng)</td>
+                    <td></td>
+                    {% for d in date_range %}
+                    <td class="total-cell" data-supervisor="Guang-hua Peng"></td>
+                    {% endfor %}
+                </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 三个图表垂直排列 -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">点检各主管问题点 summary</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="btnDaily"
+                                onclick="switchChartMode('daily')">按天显示
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnWeekly"
+                                onclick="switchChartMode('weekly')">按周显示
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartSupervisor" height="380"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold">点检记录的问题点数量折线图</div>
+                <div class="card-body">
+                    <canvas id="chartDailyTotal" height="380"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==================== 4个主管完成度饼图（已彻底防抖 + 固定大小） ==================== -->
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold">各主管完成度图（Open / Closed）</div>
+                <div class="card-body">
+                    <div class="row g-3">
+
+                        <!-- Wind Wang -->
+                        <div class="col-lg-3 col-md-6 text-center">
+                            <h6 class="mb-2">Wind Wang</h6>
+                            <canvas id="chartWind" width="250" height="280"></canvas>
+                        </div>
+
+                        <!-- Xh Li -->
+                        <div class="col-lg-3 col-md-6 text-center">
+                            <h6 class="mb-2">Xh Li</h6>
+                            <canvas id="chartXh" width="250" height="280"></canvas>
+                        </div>
+
+                        <!-- Zheng-ping Liu -->
+                        <div class="col-lg-3 col-md-6 text-center">
+                            <h6 class="mb-2">Zheng-ping Liu</h6>
+                            <canvas id="chartZhengping" width="280" height="280"></canvas>
+                        </div>
+
+                        <!-- Guang-hua Peng -->
+                        <div class="col-lg-3 col-md-6 text-center">
+                            <h6 class="mb-2">Guang-hua Peng</h6>
+                            <canvas id="chartGuanghua" width="280" height="280"></canvas>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+    // ==================== 全局变量 ====================
+    let dailyChart = null;
+    let supervisorChart = null;
+    let currentChartMode = 'daily';          // daily 或 weekly
+    let lastSupervisorDaily = null;          // 缓存每日数据
+    let lastDates = null;                    // 缓存日期
+
+    // ==================== 函数1：名称规范化 ====================
+    function normalizeSupervisorName(name) {
+        if (!name) return "";
+        let n = String(name).trim();
+        n = n.replace(/_PVN/gi, "").replace(/ PVN/gi, "");
+        n = n.replace(/風/g, "风").replace(/華/g, "华").replace(/興/g, "兴").replace(/劉/g, "刘");
+        n = n.replace(/\s+/g, "").toLowerCase();
+
+        if (n.includes("windwang") || n.includes("王海风") || n.includes("王海風")) return "Wind Wang";
+        if (n.includes("xhli") || n.includes("李興恒") || n.includes("李兴恒")) return "Xh Li";
+        if (n.includes("zhengping") || n.includes("劉正平") || n.includes("刘正平")) return "Zheng-ping Liu";
+        if (n.includes("guanghua") || n.includes("彭光華") || n.includes("彭光华")) return "Guang-hua Peng";
+        return n;
+    }
+
+    // ==================== 函数2：回填数据 ====================
+    function fillTableFromSavedData() {
+        console.log("[DEBUG] 开始按行位置 + 日期回填");
+        const savedData = {{ saved_data|safe }};
+        if (!savedData || !savedData.rows) return;
+
+        const table = document.getElementById("matrixTable");
+        const rows = table.querySelectorAll("tbody tr");
+        const dateHeaders = table.querySelectorAll("thead th");
+        const currentDates = [];
+        for (let i = 5; i < dateHeaders.length; i++) {
+            currentDates.push(dateHeaders[i].textContent.trim());
+        }
+
+        rows.forEach(function(row, rowIndex) {
+            if (row.textContent.includes("小计")) return;
+            const savedRow = savedData.rows[rowIndex];
+            if (!savedRow || !savedRow.data) return;
+
+            const inputs = row.querySelectorAll(".matrix-input");
+            inputs.forEach(function(input, colIndex) {
+                const dateStr = currentDates[colIndex];
+                if (dateStr && savedRow.data[dateStr] !== undefined) {
+                    input.value = savedRow.data[dateStr];
+                } else {
+                    input.value = 0;
+                }
+            });
+        });
+        console.log("[DEBUG] 回填完成");
+        updateChartsFromTable();
+    }
+
+    // ==================== 辅助：解析日期标签 ====================
+    function parseDateLabel(dateStr) {
+        if (!dateStr) return null;
+        dateStr = dateStr.trim();
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            const month = parseInt(parts[0], 10);
+            const day = parseInt(parts[1], 10);
+            // 默认用 2026 年（和你系统一致）
+            return new Date(2026, month - 1, day);
+        }
+        if (dateStr.includes('-')) {
+            return new Date(dateStr);
+        }
+        return null;
+    }
+
+    // ==================== 辅助：获取某天所在自然周的周一 ====================
+    function getMondayOfWeek(date) {
+        const d = new Date(date);
+        const day = d.getDay(); // 0=周日, 1=周一 ... 6=周六
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d.setDate(diff));
+        return monday.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    // ==================== 函数：绘制主管折线图（支持按天 / 按自然周） ====================
+    function drawSupervisorChart(dates, supervisorDaily, mode) {
+        if (supervisorChart) {
+            supervisorChart.destroy();
+        }
+
+        let labels = [];
+        let finalData = {};
+
+        if (mode === 'weekly') {
+            // ========== 按自然周（周一~周日）聚合 ==========
+            const weekMap = {}; // mondayStr → {label, indices: []}
+
+            dates.forEach(function(dateStr, index) {
+                const d = parseDateLabel(dateStr);
+                if (!d) return;
+
+                const mondayStr = getMondayOfWeek(d);
+ if (!weekMap[mondayStr]) {
+    const monday = new Date(mondayStr);
+
+    // 计算 ISO 周数（W01 ~ W53）
+    function getISOWeek(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        // 设置到周四（ISO 周的参考日）
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        return weekNo;
+    }
+
+    const weekNum = getISOWeek(monday);
+    const weekLabel = 'W' + String(weekNum).padStart(2, '0');   // 显示成 W28、W29...
+
+    weekMap[mondayStr] = {
+        label: weekLabel,
+        indices: []
+    };
+}
+                weekMap[mondayStr].indices.push(index);
+            });
+
+            const sortedMondays = Object.keys(weekMap).sort();
+            labels = sortedMondays.map(m => weekMap[m].label);
+
+            Object.keys(supervisorDaily).forEach(function(name) {
+                finalData[name] = sortedMondays.map(function(mondayStr) {
+                    let sum = 0;
+                    weekMap[mondayStr].indices.forEach(function(i) {
+                        sum += (supervisorDaily[name][i] || 0);
+                    });
+                    return sum;
+                });
+            });
+        } else {
+            // 按天
+            labels = dates;
+            finalData = supervisorDaily;
+        }
+
+        // 创建数据集
+        const datasets = [];
+        let colorIndex = 0;
+        const colors = ["#198754", "#dc3545", "#ffc107", "#6f42c1", "#0d6efd", "#fd7e14"];
+
+        Object.keys(finalData).forEach(function(name) {
+            datasets.push({
+                label: name,
+                data: finalData[name],
+                borderColor: colors[colorIndex % colors.length],
+                borderWidth: 3,
+                tension: 0.3,
+                pointRadius: 5,
+                pointBackgroundColor: colors[colorIndex % colors.length]
+            });
+            colorIndex++;
+        });
+
+        supervisorChart = new Chart(document.getElementById("chartSupervisor"), {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { position: 'top' } }
+            },
+            plugins: [{
+                id: 'showNumbers',
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    ctx.font = 'bold 13px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+
+                    chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        ctx.fillStyle = dataset.borderColor;
+                        dataset.data.forEach(function(value, index) {
+                            if (value !== undefined && value !== null && value !== 0) {
+                                const x = meta.data[index].x;
+                                const y = meta.data[index].y - 10;
+                                ctx.fillText(value, x, y);
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    }
+
+    // ==================== 切换 按天 / 按周 ====================
+    function switchChartMode(mode) {
+        currentChartMode = mode;
+        document.getElementById('btnDaily').classList.toggle('active', mode === 'daily');
+        document.getElementById('btnWeekly').classList.toggle('active', mode === 'weekly');
+
+        if (lastSupervisorDaily && lastDates) {
+            drawSupervisorChart(lastDates, lastSupervisorDaily, mode);
+        }
+    }
+
+    // ==================== 函数3：更新图表 + 小计 ====================
+    function updateChartsFromTable() {
+        const table = document.getElementById("matrixTable");
+        const rows = table.querySelectorAll("tbody tr");
+
+        const dateHeaders = table.querySelectorAll("thead th");
+        const dates = [];
+        for (let i = 5; i < dateHeaders.length; i++) {
+            dates.push(dateHeaders[i].textContent.trim());
+        }
+
+        const dailyTotal = new Array(dates.length).fill(0);
+        const supervisorDaily = {};
+        let currentSupervisor = "";
+
+        rows.forEach(function(row) {
+            if (row.textContent.includes("小计")) return;
+
+            const supervisorCell = row.cells[4];
+            if (supervisorCell && supervisorCell.textContent.trim() !== "") {
+                currentSupervisor = normalizeSupervisorName(supervisorCell.textContent.trim());
+            }
+            if (!currentSupervisor) return;
+
+            if (!supervisorDaily[currentSupervisor]) {
+                supervisorDaily[currentSupervisor] = new Array(dates.length).fill(0);
+            }
+
+            const inputs = row.querySelectorAll(".matrix-input");
+            inputs.forEach(function(input, i) {
+                const val = parseInt(input.value) || 0;
+                dailyTotal[i] += val;
+                supervisorDaily[currentSupervisor][i] += val;
+            });
+        });
+
+        // ===== 每日问题总数折线图 =====
+        if (dailyChart) dailyChart.destroy();
+        dailyChart = new Chart(document.getElementById("chartDailyTotal"), {
+            type: "line",
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: "每日问题总数",
+                    data: dailyTotal,
+                    borderColor: "#0d6efd",
+                    borderWidth: 4,
+                    tension: 0.3,
+                    pointRadius: 6,
+                    pointBackgroundColor: "#0d6efd"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: true } }
+            },
+            plugins: [{
+                id: 'showNumbers',
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    ctx.font = 'bold 14px Arial';
+                    ctx.fillStyle = '#000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    chart.data.datasets[0].data.forEach(function(value, index) {
+                        if (value !== undefined && value !== null) {
+                            const meta = chart.getDatasetMeta(0);
+                            const x = meta.data[index].x;
+                            const y = meta.data[index].y - 10;
+                            ctx.fillText(value, x, y);
+                        }
+                    });
+                }
+            }]
+        });
+
+        // ===== 主管 summary 图表（调用新函数） =====
+        lastSupervisorDaily = supervisorDaily;
+        lastDates = dates;
+        drawSupervisorChart(dates, supervisorDaily, currentChartMode);
+
+        // ===== 填充小计行 =====
+        Object.keys(supervisorDaily).forEach(function(sup) {
+            const totalCells = document.querySelectorAll(`.total-cell[data-supervisor="${sup}"]`);
+            const dailyData = supervisorDaily[sup];
+            totalCells.forEach(function(cell, index) {
+                if (index < dailyData.length) {
+                    cell.textContent = dailyData[index];
+                }
+            });
+        });
+    }
+
+    // ==================== 函数4：4个主管完成度饼图 ====================
+    let chartsAlreadyDrawn = false;
+    function drawAllCompletionCharts() {
+        if (chartsAlreadyDrawn) return;
+        chartsAlreadyDrawn = true;
+
+        const counts = {{ per_supervisor_counts|safe }} || {};
+        const supervisors = [
+            { id: "chartWind", label: "Wind Wang" },
+            { id: "chartXh", label: "Xh Li" },
+            { id: "chartZhengping", label: "Zheng-ping Liu" },
+            { id: "chartGuanghua", label: "Guang-hua Peng" }
+        ];
+
+        supervisors.forEach(function(sup) {
+            if (window[sup.id + "Chart"]) window[sup.id + "Chart"].destroy();
+
+            let data = { open: 0, closed: 0 };
+            for (let key in counts) {
+                if (key.includes(sup.label)) {
+                    data = counts[key];
+                    break;
+                }
+            }
+
+            const total = data.open + data.closed;
+            const openPercent = total > 0 ? Math.round(data.open / total * 100) : 0;
+            const closedPercent = total > 0 ? Math.round(data.closed / total * 100) : 0;
+
+window[sup.id + "Chart"] = new Chart(document.getElementById(sup.id), {
+    type: "doughnut",
+    data: {
+        labels: [`Open (${openPercent}%)`, `Closed (${closedPercent}%)`],
+        datasets: [{
+            data: [data.open, data.closed],
+            backgroundColor: ["#dc3545", "#198754"],
+            borderWidth: 4
+        }]
+    },
+    options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        cutout: "65%",
+        animation: false,
+        plugins: {
+            legend: {
+                position: "bottom",
+                labels: { boxWidth: 12, padding: 12, font: { size: 13 } }
+            }
+        },
+        // ==================== 新增：点击红色（Open）跳转 ====================
+        onClick: function(evt, elements) {
+            if (elements.length > 0) {
+                const clickedIndex = elements[0].index;
+                // 0 = Open（红色），1 = Closed（绿色）
+                if (clickedIndex === 0 && data.open > 0) {
+                    // 跳转到点检列表，筛选该主管 + Open 状态
+                    const url = `/patrol/?supervisor=${encodeURIComponent(sup.label)}&status=Open`;
+                    window.location.href = url;
+                }
+            }
+        }
+    }
+});
+            const container = document.getElementById(sup.id).parentElement;
+            let info = container.querySelector('.pie-info');
+            if (!info) {
+                info = document.createElement('div');
+                info.className = 'pie-info';
+                info.style.fontSize = '13px';
+                info.style.marginTop = '8px';
+                container.appendChild(info);
+            }
+            info.innerHTML = `Open: <strong>${data.open}</strong>　|　Closed: <strong>${data.closed}</strong>　|　Total: <strong>${total}</strong>`;
+        });
+    }
+
+    // ==================== 函数5：保存数据 ====================
+    function saveToFile() {
+        const table = document.getElementById("matrixTable");
+        const rows = table.querySelectorAll("tbody tr");
+        const dateHeaders = table.querySelectorAll("thead th");
+        const dates = [];
+        for (let i = 5; i < dateHeaders.length; i++) {
+            dates.push(dateHeaders[i].textContent.trim());
+        }
+
+        const data = { dates: dates, rows: [] };
+
+        rows.forEach(function(row, rowIndex) {
+            const cells = row.cells;
+            if (cells.length < 5) return;
+
+            const machine_type = cells[0].textContent.trim();
+            const category     = cells[1].textContent.trim();
+            const line         = cells[2].textContent.trim();
+            const engineer     = cells[3].textContent.trim();
+            const supervisor   = cells[4] ? cells[4].textContent.trim() : "";
+
+            const dailyData = {};
+            const inputs = row.querySelectorAll(".matrix-input");
+            inputs.forEach(function(input, colIndex) {
+                const dateStr = dates[colIndex];
+                if (dateStr) {
+                    dailyData[dateStr] = parseInt(input.value) || 0;
+                }
+            });
+
+            data.rows.push({
+                machine_type: machine_type,
+                category: category,
+                line: line,
+                engineer: engineer,
+                supervisor: supervisor,
+                data: dailyData
+            });
+        });
+
+        fetch("/patrol-analytics/save-summary/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                alert("✅ 保存成功！");
+            } else {
+                alert("❌ 保存失败：" + (result.error || "未知错误"));
+            }
+        });
+    }
+
+    // ==================== 页面加载 ====================
+    window.onload = function() {
+        fillTableFromSavedData();
+        updateChartsFromTable();
+
+        document.querySelectorAll(".matrix-input").forEach(function(input) {
+            input.addEventListener("input", updateChartsFromTable);
+        });
+
+        drawAllCompletionCharts();
+
+        // 强制小计行黄色
+        function forceYellowTotalRows() {
+            document.querySelectorAll('tr.total-row').forEach(function(row) {
+                row.style.backgroundColor = '#ffeaa7';
+                row.style.fontWeight = 'bold';
+                row.querySelectorAll('td').forEach(function(td) {
+                    td.style.backgroundColor = '#ffeaa7';
+                });
+            });
+        }
+        forceYellowTotalRows();
+        setTimeout(forceYellowTotalRows, 300);
+
+        // 强制表格紧凑
+        function makeTableCompact() {
+            document.querySelectorAll('#matrixTable td, #matrixTable th').forEach(function(el) {
+                el.style.padding = '3px 2px';
+                el.style.fontSize = '12px';
+            });
+            document.querySelectorAll('.matrix-input').forEach(function(input) {
+                input.style.height = '26px';
+                input.style.fontSize = '12px';
+            });
+        }
+        makeTableCompact();
+        setTimeout(makeTableCompact, 500);
+    };
+
+
+
+
+
+
+
+
+
+</script>
+{% endblock %}

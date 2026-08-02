@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}所有问题点记录（含根因 + 可导入项目）{% endblock %}
+
+{% block content %}
+<h2>所有问题点记录（含根因 + 可导入项目）</h2>
+
+<!-- ==================== 搜索框 + 绿条 ==================== -->
+<div class="mb-4">
+    <!-- 搜索表单（复用 search app） -->
+    <form method="get" class="row g-3 align-items-end">
+        {% include 'search/search_form_snippet.html' %}
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">🔍 搜索设备</button>
+        </div>
+    </form>
+
+    <!-- 绿色当前设备条（自动显示） -->
+    {% if selected_equipment %}
+    <div class="alert alert-success mt-3 d-flex justify-content-between align-items-center">
+        <div>
+            ✅ <strong>当前设备：</strong> {{ selected_equipment.name }}
+            ({{ selected_equipment.code }})
+            <small class="text-muted">ID: {{ selected_equipment.pk }}</small>
+        </div>
+        <div>
+            <a href="{% url 'issues:issue_create' selected_equipment.pk %}" class="btn btn-success btn-sm">
+                ➕ 新增问题点
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ==================== 导入按钮 ==================== -->
+<a href="{% url 'issues:import_issues_global' %}" class="btn btn-secondary mb-2">
+    📤 导入新格式Excel
+</a>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>日期</th>
+            <th>异常现象</th>
+            <th>根因</th>
+            <th>异常工时</th>
+            <th>甄别</th>
+            <th>可导入保养</th>
+            <th>保养ID</th>
+            <th>可导入设计</th>
+            <th>设计ID</th>
+            <th>RISK ID</th>
+            <th style="width:180px;">照片/视频</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for issue in issues %}
+        <tr>
+            <td>{{ issue.equipment.name }}</td>
+            <td>{{ issue.occur_date }}</td>
+            <td>{{ issue.desc|truncatewords:8 }}</td>
+            <td>{{ issue.root_cause|truncatewords:5 }}</td>
+            <td>{{ issue.abnormal_work_time }} min</td>
+            <td>{{ issue.work_time_type }}</td>
+            <td>{% if issue.can_import_maintenance %}✅{% else %}❌{% endif %}</td>
+            <td>{{ issue.maintenance_id }}</td>
+            <td>{% if issue.can_import_design %}✅{% else %}❌{% endif %}</td>
+            <td>{{ issue.design_id }}</td>
+            <td>{{ issue.risk_id }}</td>
+
+            <!-- 照片列 -->
+            <td>
+                {% if issue.photos and issue.photos|length > 0 %}
+                    {% for url in issue.photos %}
+                        <a href="{{ url }}" target="_blank" class="me-1">
+                            {% if url|slice:"-4:" in '.mp4.mkv.mov.avi' %}
+                                <video width="110" height="80" controls style="border-radius:4px;"></video>
+                            {% else %}
+                                <img src="{{ url }}" style="max-width:110px; max-height:80px; border-radius:4px; border:1px solid #ddd;">
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                {% elif issue.photo %}
+                    <a href="{{ issue.photo.url }}" target="_blank">
+                        {% if issue.photo.url|slice:"-4:" in '.mp4.mkv.mov.avi' %}
+                            <video width="110" height="80" controls style="border-radius:4px;"></video>
+                        {% else %}
+                            <img src="{{ issue.photo.url }}" style="max-width:110px; max-height:80px; border-radius:4px;">
+                        {% endif %}
+                    </a>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

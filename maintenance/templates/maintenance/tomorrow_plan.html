@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}明天保养计划{% endblock %}
+{% block content %}
+<h2>📅 明天保养计划（{{ tomorrow|date:"Y年m月d日" }} {{ weekend_note }}）</h2>
+
+<!-- 统计栏 -->
+<div class="alert alert-info">
+    <strong>明天共 {{ jobs|length }} 项保养任务</strong>
+    （待执行：<span class="text-danger">{{ pending_count }}</span> |
+    已完成：<span class="text-success">{{ done_count }}</span> |
+    预计备品：{{ spare_estimate }} 个）
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>SOP项目</th>
+            <th>状态</th>
+            <th>预计备品</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td><strong>{{ job.equipment.name }}</strong></td>
+            <td>{{ job.sop.name }}</td>
+            <td>
+                {% if job.status == 'done' %}
+                    <span class="badge bg-success">✅ 已完成</span>
+                {% else %}
+                    <span class="badge bg-danger">🔴 待执行</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if job.spare_used %}⚠️ 需要备品{% else %}正常{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not jobs %}
+<p class="text-success">✅ 明天没有保养任务</p>
+{% endif %}
+{% endblock %}

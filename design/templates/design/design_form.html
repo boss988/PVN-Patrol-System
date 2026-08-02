@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}新增/编辑设计信息{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white py-3">
+            <h4 class="mb-0">
+                <i class="bi bi-gear-fill"></i>
+                新增设计信息 - {{ selected_equipment.name }} ({{ selected_equipment.code }})
+            </h4>
+        </div>
+
+        <div class="card-body p-5">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <!-- 彻底隐藏 Equipment -->
+                <input type="hidden" name="equipment" value="{{ selected_equipment.pk }}">
+
+                <div class="row g-4">
+                    <!-- 硬件/软件配置 -->
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">硬件/软件配置（减分项）</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4 form-check form-switch">{{ form.has_computer }} <label class="form-check-label">{{ form.has_computer.label }}</label></div>
+                            <div class="col-md-4 form-check form-switch">{{ form.has_robot_arm }} <label class="form-check-label">{{ form.has_robot_arm.label }}</label></div>
+                            <div class="col-md-4 form-check form-switch">{{ form.has_screw_feeder }} <label class="form-check-label">{{ form.has_screw_feeder.label }}</label></div>
+                            <div class="col-md-4 form-check form-switch">{{ form.has_scanner }} <label class="form-check-label">{{ form.has_scanner.label }}</label></div>
+                            <div class="col-md-4 form-check form-switch">{{ form.has_printer }} <label class="form-check-label">{{ form.has_printer.label }}</label></div>
+                            <div class="col-md-4">{{ form.vision_type }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">{{ form.plc_model.label }}</label>
+                        {{ form.plc_model }}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">{{ form.dvp_file.label }}</label>
+                        {{ form.dvp_file }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">{{ form.pmp_file.label }}</label>
+                        {{ form.pmp_file }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">{{ form.image.label }}</label>
+                        {{ form.image }}
+                        <small class="text-muted">可上传多张设备照片（jpg / png）</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">新特异设计</label>
+                        {{ form.novel_design }}
+                    </div>
+                    <div class="col-md-6 form-check form-switch mt-4">
+                        {{ form.multi_model }}
+                        <label class="form-check-label fw-bold">多机种</label>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">{{ form.risk_points_text.label }}</label>
+                        {{ form.risk_points_text }}
+                    </div>
+                </div>
+
+                <!-- 提交按钮（关键修复在这里） -->
+                <div class="d-flex justify-content-end gap-3 mt-5">
+                    <!-- 正确写法：先 url 再手动加 ?equipment_id= -->
+                        <a href="{% url 'design:global_design_list' %}?equipment_id={{ selected_equipment.pk }}"
+                         class="btn btn-secondary px-4">取消</a>
+                    <button type="submit" class="btn btn-success px-5">保存设计信息</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

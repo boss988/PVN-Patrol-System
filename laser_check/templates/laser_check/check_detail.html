@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}镭雕图检查 - {{ part_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>料号: <strong>{{ part_number }}</strong></h2>
+
+        <div>
+            <a href="{% url 'laser_check:search_page' %}" class="btn btn-secondary me-2">← 返回搜索</a>
+            <!-- 新增：AI检测按钮 -->
+            <a href="{% url 'laser_check:ai_check' part_number %}"
+               class="btn btn-success btn-lg">
+                <i class="bi bi-robot"></i> 🚀 AI检测镭雕图差异
+            </a>
+            <a href="{% url 'laser_check:ai_history' part_number %}" class="btn btn-info">
+                📋 查看AI检测历史
+            </a>
+        </div>
+    </div>
+
+    {% if spec_from_excel %}
+    <p><strong>Excel映射规格：</strong><span class="text-success">{{ spec_from_excel }}</span></p>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- 左侧：产品图 PDF（66%） -->
+        <div class="col-lg-8 col-12">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white fs-5">
+                    <strong>产品图 (PDF)</strong>
+                </div>
+                <div class="card-body p-0" style="min-height: 650px;">
+                    {% if product_path and pdf_absolute_url %}
+                    <embed src="{{ pdf_absolute_url }}"
+                           type="application/pdf"
+                           width="100%"
+                           height="650px"
+                           style="border: none;">
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <h5>未找到产品图 PDF</h5>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if product_path %}
+                    <a href="{{ pdf_absolute_url }}" target="_blank" class="btn btn-primary w-100">
+                        📄 在新标签页打开 PDF
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：镭雕图文件列表（33%） -->
+        <div class="col-lg-4 col-12">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark fs-5">
+                    <strong>镭雕图 (.ezd) 文件列表</strong>
+                </div>
+                <div class="card-body p-0" style="min-height: 650px;">
+                    {% if laser_files %}
+                    <div class="list-group list-group-flush">
+                        {% for file in laser_files %}
+                        <a href="{% url 'laser_check:serve_file' 'ezd' file.relative_path %}"
+                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-earmark-text me-2"></i>
+                                <strong>{{ file.filename }}</strong>
+                            </div>
+                            <span class="badge bg-warning text-dark">下载</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <h5>未找到任何 .ezd 文件</h5>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

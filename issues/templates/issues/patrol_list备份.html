@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}点检问题点记录{% endblock %}
+
+{% block content %}
+<h2>📋 点检问题点记录</h2>
+
+<div class="mb-3 d-flex gap-2">
+    <a href="{% url 'issues:patrol_create' %}" class="btn btn-primary">➕ 新增点检记录</a>
+    <a href="{% url 'issues:patrol_import' %}" class="btn btn-secondary">📤 导入Excel</a>
+    <a href="{% url 'issues:patrol_export' %}" class="btn btn-success">📥 导出Excel</a>
+    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#sendEmailModal">
+        📧 发送邮件
+    </button>
+</div>
+
+<div class="alert alert-info py-2 mb-3">
+    💡 <strong>提示</strong>：点击表头右侧 <strong>▼</strong> 可对该列进行筛选（类似Excel）
+</div>
+
+<table id="patrolTable" class="table table-striped table-bordered">
+    <thead class="table-dark">
+        <tr>
+            <th style="width:3%"><input type="checkbox" id="select-all"></th>
+            <th style="width:8%" data-column="date">日期 <span class="filter-icon">▼</span></th>
+            <th style="width:10%" data-column="line">线别 <span class="filter-icon">▼</span></th>
+            <th style="width:10%" data-column="station">站别 <span class="filter-icon">▼</span></th>
+            <th style="width:35%">问题要改善</th>
+            <th style="width:18%">照片/视频</th>
+            <th style="width:10%" data-column="op">OP负责人 <span class="filter-icon">▼</span></th>
+            <th style="width:10%" data-column="supervisor">主管 <span class="filter-icon">▼</span></th>
+            <th style="width:6%" data-column="status">状态 <span class="filter-icon">▼</span></th>
+            <th style="width:6%">操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for issue in issues %}
+        <tr style="height: 110px;">
+            <td><input type="checkbox" name="selected_ids" value="{{ issue.id }}" class="row-checkbox"></td>
+            <td data-value="{{ issue.date }}">{{ issue.date }}</td>
+            <td data-value="{{ issue.line }}">{{ issue.line|default:"-" }}</td>
+            <td data-value="{{ issue.station }}">{{ issue.station|default:"-" }}</td>
+            <td style="vertical-align:top; white-space:pre-wrap;">{{ issue.problem_desc }}</td>
+
+            <td>
+                {% if issue.photos and issue.photos|length > 0 %}
+                    {% for url in issue.photos %}
+                        <a href="{{ url }}" target="_blank" class="me-1">
+                            {% if url|slice:"-4:" in '.mp4.mkv.mov.avi' %}
+                                <video width="110" height="80" controls style="border-radius:4px;">
+                                    <source src="{{ url }}" type="video/mp4">
+                                </video>
+                            {% else %}
+                                <img src="{{ url }}" style="max-width:110px; max-height:80px; border-radius:4px; border:1px solid #ddd;">
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                {% elif issue.photo %}
+                    {% if issue.photo.url|slice:"-4:" in '.mp4.mkv.mov.avi' %}
+                        <video width="110" height="80" controls style="border-radius:4px;">
+                            <source src="{{ issue.photo.url }}" type="video/mp4">
+                        </video>
+                    {% else %}
+                        <a href="{{ issue.photo.url }}" target="_blank">
+                            <img src="{{ issue.photo.url }}" style="max-width:110px; max-height:80px; border-radius:4px;">
+                        </a>
+                    {% endif %}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td data-value="{{ issue.op_responsible }}">{{ issue.op_responsible|default:"-" }}</td>
+            <td data-value="{{ issue.supervisor }}">{{ issue.supervisor|default:"-" }}</td>
+            <td data-value="{{ issue.status }}">
+                <span class="badge {% if issue.status == 'Open' %}bg-danger{% else %}bg-success{% endif %}">{{ issue.status }}</span>
+            </td>
+            <td>
+                <a href="{% url 'issues:patrol_edit' issue.pk %}" class="btn btn-warning btn-sm">编辑</a>
+                <a href="{% url 'issues:patrol_delete' issue.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('确定删除吗？')">删除</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- 邮件弹窗（完全保留） -->
+{% include 'issues/send_email_modal.html' %}
+{% include 'issues/export_modal.html' %}
+
+<!-- ==================== 超级调试 JS（放在 block content 里面，保证执行） ==================== -->
+<script>
+    console.log('🚀 patrol_list.html 调试脚本已加载（放在 content 块内）');
+
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('✅ DOM 已加载完成');
+
+        const table = document.getElementById('patrolTable');
+        if (!table) {
+            console.error('❌ 找不到 patrolTable 表格！');
+            return;
+        }
+        console.log('✅ 成功找到表格');
+
+        const headers = table.querySelectorAll('th[data-column]');
+        console.log(`✅ 找到 ${headers.length} 个可筛选表头`);
+
+        headers.forEach((header, index) => {
+            const icon = header.querySelector('.filter-icon');
+            if (!icon) return;
+
+            const displayName = header.textContent.replace(/[▼]/g, '').trim();
+            console.log(`🔧 第 ${index} 列【${displayName}】 已绑定点击事件`);
+
+            const doFilter = function(e) {
+                console.log(`🟢 你点击了 【${displayName}】 的 ▼`);
+                e.stopImmediatePropagation();
+
+                const filterText = prompt(`🔍 在【${displayName}】列中筛选：\n（留空 = 显示全部）`, '');
+
+                if (filterText === null) {
+                    console.log('👉 用户取消');
+                    return;
+                }
+
+                const rows = table.querySelectorAll('tbody tr');
+                const cellIndex = Array.from(header.parentNode.children).indexOf(header);
+
+                rows.forEach(row => {
+                    const targetCell = row.cells[cellIndex];
+                    if (!targetCell) return;
+
+                    const cellText = (targetCell.getAttribute('data-value') || targetCell.textContent || '').toLowerCase().trim();
+
+                    if (filterText === '' || cellText.includes(filterText.toLowerCase().trim())) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            };
+
+            icon.style.cursor = 'pointer';
+            icon.addEventListener('click', doFilter);
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', doFilter);
+        });
+
+        console.log('🎉 所有筛选功能已绑定完成！现在点击 ▼ 应该会有日志');
+    });
+</script>
+
+{% endblock %}

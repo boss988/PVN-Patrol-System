@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}问题记录 - {{ equipment.name }}{% endblock %}
+{% block content %}
+<h2>问题点记录</h2>
+<table class="table">
+    <thead><tr><th>码</th><th>描述</th><th>日期</th><th>严重度</th><th>重复</th></tr></thead>
+    <tbody>
+        {% for issue in issues %}
+        <tr><td>{{ issue.issue_code }}</td><td>{{ issue.desc }}</td><td>{{ issue.occur_date }}</td><td>{{ issue.get_severity_display }}</td><td>{{ issue.reoccur_status }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'issues:issue_create' equipment.pk %}" class="btn btn-primary">添加问题</a>
+<a href="{% url 'issues:import_issues' equipment.pk %}" class="btn btn-secondary">导入Excel</a>
+{% endblock %}

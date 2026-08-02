@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}所有备品库存{% endblock %}
+
+{% block content %}
+<h2>所有备品库存（含使用壽命 + 差異）</h2>
+
+<!-- ==================== 搜索框 ==================== -->
+<div class="mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        {% include 'search/search_form_snippet.html' %}
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">🔍 搜索设备</button>
+        </div>
+    </form>
+
+    <!-- 绿色当前设备条 -->
+    {% if selected_equipment %}
+    <div class="alert alert-success mt-3 d-flex justify-content-between align-items-center">
+        <div>
+            ✅ <strong>当前设备：</strong> {{ selected_equipment.name }}
+            ({{ selected_equipment.code }})
+            <small class="text-muted">ID: {{ selected_equipment.pk }}</small>
+        </div>
+        <div>
+            <!-- 关键修复：指向新增页面 -->
+            <a href="{% url 'spares:spare_create' selected_equipment.pk %}" class="btn btn-success btn-sm">
+                ➕ 新增备品
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 导入按钮 -->
+<a href="{% url 'spares:import_spares' %}" class="btn btn-secondary mb-3">📤 导入备品Excel</a>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>设备</th>
+            <th>备品名称</th>
+            <th>规格</th>
+            <th>品牌</th>
+            <th>當站使用數量</th>
+            <th>使用壽命(月)</th>
+            <th>安全庫存</th>
+            <th>庫存數量</th>
+            <th>差異</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in spares %}
+        <tr>
+            <td>{{ s.equipment.name }}</td>
+            <td>{{ s.name }}</td>
+            <td>{{ s.spec }}</td>
+            <td>{{ s.supplier }}</td>
+            <td>{{ s.usage_qty }}</td>
+            <td>{{ s.life_months }}</td>
+            <td>{{ s.min_stock }}</td>
+            <td>{{ s.stock_qty }}</td>
+            <td>{{ s.difference }}</td>
+            <td {% if s.is_low_stock %}class="text-danger"{% else %}class="text-success"{% endif %}>
+                {% if s.is_low_stock %}低库存 ⚠️{% else %}正常 ✅{% endif %}
+            </td>
+            <td>
+                <a href="{% url 'spares:spare_delete' s.pk %}"
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('确定删除 {{ s.name }} 吗？')">
+                    🗑️ 删除
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
