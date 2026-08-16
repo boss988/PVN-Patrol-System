@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}异常详情Chi tiết bất thường - {{ issue.issue_code }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 960px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">📄 异常详情Chi tiết bất thường</h3>
+        <div>
+            {% if can_edit %}
+            <a href="{% url 'issues:issue_edit' issue.pk %}" class="btn btn-warning">✏️ 编辑Sửa</a>
+            <a href="{% url 'issues:issue_delete' issue.pk %}" class="btn btn-outline-danger">🗑 删除Xóa</a>
+            {% endif %}
+            <a href="{% url 'issues:global_issues_list' %}" class="btn btn-secondary">返回列表</a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-bold">基本信息Thông tin cơ bản</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4"><strong>问题码Mã：</strong>{{ issue.issue_code }}</div>
+                <div class="col-md-4"><strong>RISK ID：</strong>{{ issue.risk_id|default:"-" }}</div>
+                <div class="col-md-4"><strong>发生日期Ngày：</strong>{{ issue.occur_date|date:"Y-m-d" }}</div>
+                <div class="col-md-4"><strong>机种Loại máy：</strong>{{ issue.equipment.model_type|default:"-" }}</div>
+                <div class="col-md-4"><strong>线体Tuyến：</strong>{{ issue.equipment.line|default:"-" }}</div>
+                <div class="col-md-4"><strong>站别Trạm：</strong>{{ issue.equipment.station|default:"-" }}</div>
+                <div class="col-md-4"><strong>设备Thiết bị：</strong>{{ issue.equipment.code }} - {{ issue.equipment.name }}</div>
+                <div class="col-md-4"><strong>异常工时Thời gian：</strong>{{ issue.abnormal_work_time }} min</div>
+                <div class="col-md-4"><strong>严重度Mức độ：</strong>{{ issue.get_severity_display }}</div>
+                <div class="col-md-4"><strong>问题类别Loại：</strong>{{ issue.category.name|default:"-" }}</div>
+                <div class="col-md-4"><strong>责任主管Chủ quản：</strong>{{ issue.supervisor|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-bold">异常与改善Bất thường & cải thiện</div>
+        <div class="card-body">
+            <p><strong>异常现象及原因：</strong></p>
+            <p class="border rounded p-2 bg-light">{{ issue.desc|linebreaksbr }}</p>
+            <p class="mt-3"><strong>改善 / 处理方法：</strong></p>
+            <p class="border rounded p-2 bg-light">{{ issue.root_cause|default:"-"|linebreaksbr }}</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header fw-bold">导入相关Có thể nhập module</div>
+        <div class="card-body">
+            <div class="row g-2">
+                <div class="col-md-6">保养Bảo dưỡng：{% if issue.can_import_maintenance %}✅{% else %}❌{% endif %}　ID：{{ issue.maintenance_id|default:"-" }}</div>
+                <div class="col-md-6">设计Thiết kế：{% if issue.can_import_design %}✅{% else %}❌{% endif %}　ID：{{ issue.design_id|default:"-" }}</div>
+                <div class="col-md-6">培训Đào tạo：{% if issue.can_import_training %}✅{% else %}❌{% endif %}　ID：{{ issue.training_id|default:"-" }}</div>
+                <div class="col-md-6">维修Sửa chữa：{% if issue.can_import_repair %}✅{% else %}❌{% endif %}　ID：{{ issue.repair_id|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">照片 / 视频Ảnh / Video</div>
+        <div class="card-body">
+            {% if issue.photo %}
+                <a href="{{ issue.photo.url }}" target="_blank">
+                    <img src="{{ issue.photo.url }}" alt="photo" style="max-height:200px; max-width:100%;" class="rounded border">
+                </a>
+            {% else %}
+                <span class="text-muted">无Không có</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}{{ model }} 线体明细{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 mt-3">
+    <div class="mb-3">
+        <a href="{% url 'issues:equipment_analytics_trend' model %}?mode={{ mode }}" class="text-decoration-none">←
+            返回趋势图</a>
+        <h3 class="mt-2">{{ model }} · {{ title_point }} · 线体明细Chi tiết tuyến</h3>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover table-sm mb-0 text-center align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>线体Tuyến</th>
+                    <th>异常时间Thời gian (min)</th>
+                    <th>记录数Số bản ghi</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in line_details %}
+                <tr>
+                    <td>{{ row.line }}</td>
+                    <td class="fw-bold">{{ row.minutes }}</td>
+                    <td>{{ row.count }}</td>
+                    <td>
+                        <a href="{% url 'issues:equipment_analytics_stations' model mode point row.line %}"
+                           class="btn btn-sm btn-outline-primary">
+                            看站别Xem trạm
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-muted py-4">该时间点无数据</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

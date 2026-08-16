@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}设备异常分析看板Bảng phân tích bất thường thiết bị{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">📊 设备异常分析看板Bảng phân tích bất thường thiết bị</h3>
+            <div class="text-muted small">
+                今日Hôm nay：{{ today|date:"Y-m-d" }}
+                　|　本周Tuần này：{{ week_start|date:"Y-m-d" }} ~ {{ today|date:"Y-m-d" }}
+            </div>
+        </div>
+        <a href="{% url 'issues:global_issues_list' %}" class="btn btn-outline-primary">
+            📋 异常记录列表Danh sách
+        </a>
+    </div>
+
+    <!-- 机种总览卡片（可点击） -->
+    <div class="row g-3 mb-4">
+        {% for card in cards %}
+        <div class="col-md-4">
+            <a href="?model={{ card.model_type }}&mode={{ chart_mode|default:'day' }}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm h-100 border-0 {% if selected_model == card.model_type %}border border-2 border-primary{% endif %}"
+                     style="border-left: 5px solid {% if card.model_type == 'BNC' %}#0d6efd{% elif card.model_type == 'PRO' %}#198754{% else %}#fd7e14{% endif %} !important; cursor:pointer;">
+                    <div class="card-body">
+                        <h4 class="card-title fw-bold mb-3">
+                            {{ card.model_type }}
+                            {% if selected_model == card.model_type %}
+                            <span class="badge bg-primary">已选</span>
+                            {% endif %}
+                        </h4>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div>
+                                <div class="text-muted small">今日异常时间Thời gian hôm nay</div>
+                                <div class="fs-2 fw-bold text-danger">{{ card.today_minutes }} <span class="fs-6">min</span></div>
+                                <div class="small text-muted">{{ card.today_count }} 条记录bản ghi</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted small">本周异常时间Tuần này</div>
+                                <div class="fs-3 fw-bold">{{ card.week_minutes }} <span class="fs-6">min</span></div>
+                                <div class="small text-muted">{{ card.week_count }} 条记录bản ghi</div>
+                            </div>
+                        </div>
+                        <div class="btn btn-sm btn-outline-primary w-100 mt-3">
+                            查看趋势Xem xu hướng
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 折线图区域 -->
+    {% if selected_model %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-bold">{{ selected_model }} · 异常时间趋势Xu hướng thời gian bất thường</span>
+            <div class="btn-group btn-group-sm">
+                <a href="?model={{ selected_model }}&mode=day"
+                   class="btn btn-outline-primary {% if chart_mode == 'day' %}active{% endif %}">
+                    按天Theo ngày（14天）
+                </a>
+                <a href="?model={{ selected_model }}&mode=week"
+                   class="btn btn-outline-primary {% if chart_mode == 'week' %}active{% endif %}">
+                    按周Theo tuần（8周）
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="trendChart" height="110"></canvas>
+        </div>
+    </div>
+
+    <div class="alert alert-light border">
+        💡 下一步：点击折线图上的某天/某周 → 显示该范围各线体异常时间明细。
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        请点击上方机种卡片，查看异常时间趋势。
+        Vui lòng chọn loại máy ở trên để xem xu hướng.
+    </div>
+    {% endif %}
+</div>
+
+{% if selected_model %}
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+    var labels = {{ chart_labels|safe }};
+    var values = {{ chart_values|safe }};
+    var ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '异常时间(min)',
+                data: values,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13,110,253,0.12)',
+                fill: true,
+                tension: 0.25,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.parsed.y + ' min';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '分钟Phút' }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

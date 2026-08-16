@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}确认删除Xác nhận xóa{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 560px;">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white fw-bold">
+            ⚠️ 确认删除Xác nhận xóa
+        </div>
+        <div class="card-body">
+            <p>确定要删除这条设备异常记录吗？</p>
+            <p class="mb-1"><strong>问题码：</strong>{{ issue.issue_code }}</p>
+            <p class="mb-1"><strong>日期：</strong>{{ issue.occur_date|date:"Y-m-d" }}</p>
+            <p class="mb-3"><strong>现象：</strong>{{ issue.desc|truncatechars:60 }}</p>
+            <p class="text-danger small">删除后无法恢复！</p>
+
+            <form method="post" class="d-flex gap-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">确认删除Xóa</button>
+                <a href="{% url 'issues:issue_detail' issue.pk %}" class="btn btn-secondary">取消</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

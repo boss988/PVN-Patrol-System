@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .issues_models import EquipmentIssue, PatrolIssue, PatrolCategory
+from .issues_models import EquipmentIssue, PatrolIssue, EquipmentIssueCategory,ProductionLineConfig
 
 
 @admin.register(PatrolCategory)
@@ -32,3 +33,22 @@ class PatrolIssueAdmin(admin.ModelAdmin):
         queryset.delete()
         self.message_user(request, "选中的点检记录已删除！")
     delete_selected.short_description = "删除选中的点检记录"
+
+@admin.register(EquipmentIssueCategory)
+class EquipmentIssueCategoryAdmin(admin.ModelAdmin):
+    """设备异常问题类别后台管理"""
+    list_display = ('order', 'name', 'is_active', 'created_at')
+    list_display_links = ('name',)          # 避免 list_editable 报错
+    list_editable = ('order', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+    ordering = ('order', 'id')
+
+@admin.register(ProductionLineConfig)
+class ProductionLineConfigAdmin(admin.ModelAdmin):
+    list_display = ('order', 'model_type', 'category', 'line', 'supervisor', 'is_active')
+    list_display_links = ('line',)
+    list_editable = ('order', 'is_active')
+    list_filter = ('model_type', 'category', 'is_active')
+    search_fields = ('model_type', 'category', 'line', 'supervisor')
+    ordering = ('order', 'model_type', 'category', 'line')

@@ -1,76 +1,138 @@
 {% extends 'base.html' %}
-{% block title %}新建设备{% endblock %}
+{% block title %}新建设备Thêm mới thiết bị{% endblock %}
+
 {% block content %}
-<h2>新建设备Thêm mới thiết bị</h2>
+<div class="container-fluid px-3 mt-3" style="max-width: 960px;">
+    <h3 class="mb-3">新建设备Thêm mới thiết bị</h3>
 
-<form method="post">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-md-6">
-            <label>设备编号 <span class="text-danger">*</span></label>
-            <input type="text" name="code" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-            <label>设备名称Số hiệu thiết bị <span class="text-danger">*</span></label>
-            <input type="text" name="name" class="form-control" required>
-        </div>
-    </div>
+    <form method="post">
+        {% csrf_token %}
 
-    <div class="row mt-3">
-        <div class="col-md-6">
-            <label>安装日期Ngày lắp đặt <span class="text-danger">*</span></label>
-            <input type="date" name="install_date" class="form-control" required>
+        <!-- 基本信息 -->
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header fw-bold">基本信息Thông tin cơ bản</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">设备编号Mã thiết bị <span class="text-danger">*</span></label>
+                        <input type="text" name="code" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">设备名称Tên thiết bị <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">安装日期Ngày lắp đặt <span class="text-danger">*</span></label>
+                        <input type="date" name="install_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">状态Trạng thái</label>
+                        <select name="status" class="form-select">
+                            <option value="active">活跃Hoạt động</option>
+                            <option value="inactive">停用Ngừng hoạt động</option>
+                            <option value="maintenance">保养中Đang bảo dưỡng</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">RFID卡号 <span class="text-danger">*</span></label>
+                        <input type="text" name="rfid_card" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">设备类型Loại thiết bị</label>
+                        <input type="text" name="eq_type" class="form-control" placeholder="如：自动锁螺丝机">
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-6">
-            <label>状态Trạng thái</label>
-            <select name="status" class="form-control">
-                <option value="active">活跃Hoạt động</option>
-                <option value="inactive">停用Ngừng hoạt động</option>
-                <option value="maintenance">保养中Đang bảo dưỡng</option>
-            </select>
-        </div>
-    </div>
 
-    <!-- RFID 改为必填 -->
-    <div class="row mt-3">
-        <div class="col-md-4">
-            <label>RFID卡号 <span class="text-danger">*</span></label>
-            <input type="text" name="rfid_card" class="form-control" required>
+        <!-- 位置：机种 → 类别 → 线别 → 站别 -->
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header fw-bold">设备位置Vị trí thiết bị</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">机种Loại máy</label>
+                        <select name="model_type" id="modelType" class="form-select">
+                            <option value="">-- 请选择机种 --</option>
+                            {% for mt in model_types %}
+                            <option value="{{ mt }}">{{ mt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">类别Loại (Auto/manual)</label>
+                        <select name="category" id="categorySelect" class="form-select">
+                            <option value="">-- 先选机种 --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">线别Tuyến</label>
+                        <select name="line" id="lineSelect" class="form-select">
+                            <option value="">-- 先选类别 --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">站别Trạm</label>
+                        <input type="text" name="station" class="form-control" placeholder="如：D52">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">区域Khu vực</label>
+                        <input type="text" name="area" class="form-control">
+                    </div>
+                </div>
+                <div class="form-text mt-2">顺序：机种 → 类别 → 线别（配置表）→ 站别（手填）</div>
+            </div>
         </div>
-        <div class="col-md-4">
-            <label>站别Trạm</label>
-            <input type="text" name="station" class="form-control">
-        </div>
-        <div class="col-md-4">
-            <label>线别Dây chuyền</label>
-            <input type="text" name="line" class="form-control">
-        </div>
-    </div>
 
-    <div class="row mt-3">
-        <div class="col-md-6">
-            <label>机种Loại máy</label>
-            <input type="text" name="model_type" class="form-control">
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">✅ 保存设备Lưu thiết bị</button>
+            <a href="{% url 'core:equipment_list' %}" class="btn btn-outline-secondary">取消</a>
         </div>
-        <div class="col-md-6">
-            <label>区域Khu vực</label>
-            <input type="text" name="area" class="form-control">
-        </div>
-    </div>
+    </form>
+</div>
 
-    <div class="row mt-3">
-        <div class="col-md-6">
-            <label>类别Loại</label>
-            <input type="text" name="category" class="form-control">
-        </div>
-        <div class="col-md-6">
-            <label>设备类型Loại thiết bị</label>
-            <input type="text" name="eq_type" class="form-control" placeholder="如：自动锁螺丝机">
-        </div>
-    </div>
+<script>
+const CONFIGS = {{ configs_json|safe }};
+const modelTypeEl = document.getElementById('modelType');
+const categoryEl = document.getElementById('categorySelect');
+const lineEl = document.getElementById('lineSelect');
 
-    <div class="mt-4">
-        <button type="submit" class="btn btn-success">✅ 保存设备Lưu thiết bị</button>
-    </div>
-</form>
+function resetSelect(el, text) {
+    el.innerHTML = '<option value="">' + text + '</option>';
+}
+
+modelTypeEl.addEventListener('change', function () {
+    const mt = this.value;
+    resetSelect(categoryEl, '-- 请选择类别 --');
+    resetSelect(lineEl, '-- 先选类别 --');
+    if (!mt) return;
+    const cats = [];
+    CONFIGS.forEach(function (c) {
+        if (c.model_type === mt && c.category && cats.indexOf(c.category) === -1) {
+            cats.push(c.category);
+        }
+    });
+    cats.forEach(function (cat) {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        categoryEl.appendChild(opt);
+    });
+});
+
+categoryEl.addEventListener('change', function () {
+    const mt = modelTypeEl.value;
+    const cat = this.value;
+    resetSelect(lineEl, '-- 请选择线体 --');
+    if (!mt || !cat) return;
+    CONFIGS.forEach(function (c) {
+        if (c.model_type === mt && c.category === cat) {
+            const opt = document.createElement('option');
+            opt.value = c.line;
+            opt.textContent = c.line;
+            lineEl.appendChild(opt);
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ model }} 异常趋势{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="{% url 'issues:equipment_analytics' %}" class="text-decoration-none">← 返回总览</a>
+            <h3 class="mt-2 mb-0">{{ model }} · 异常时间趋势Xu hướng</h3>
+        </div>
+        <div class="btn-group">
+            <a href="?mode=day" class="btn btn-outline-primary {% if mode == 'day' %}active{% endif %}">按天14天</a>
+            <a href="?mode=week" class="btn btn-outline-primary {% if mode == 'week' %}active{% endif %}">按周8周</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <canvas id="trendChart" height="120"></canvas>
+            <div class="text-muted small mt-2">提示：点击图上的点，查看该天/该周的线体明细</div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+(function () {
+    var labels = {{ chart_labels|safe }};
+    var values = {{ chart_values|safe }};
+    var pointKeys = {{ point_keys|safe }};
+    var model = "{{ model }}";
+    var mode = "{{ mode }}";
+
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '异常时间(min)',
+                data: values,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13,110,253,0.12)',
+                fill: true,
+                tension: 0.25,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            onClick: function (evt, elements) {
+                if (!elements.length) return;
+                var idx = elements[0].index;
+                var point = pointKeys[idx];
+                window.location.href = '/issues/analytics/' + model + '/' + mode + '/' + point + '/';
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) { return ctx.parsed.y + ' min（点击下钻）'; }
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: '分钟Phút' } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

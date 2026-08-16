@@ -24,10 +24,33 @@ class EquipmentForm(forms.ModelForm):
 @login_required
 def equipment_create(request):
     """
-    新建设备（code 和 RFID 必须唯一且不能为空）
-    输入：表单
-    输出：保存后返回列表
+    新建设备
+    机种/类别/线别：来自产线层级配置表（下拉）
+    站别：手填
     """
+    from issues.issues_models import ProductionLineConfig
+    import json
+
+    configs = list(
+        ProductionLineConfig.objects.filter(is_active=True)
+        .order_by('order', 'model_type', 'category', 'line')
+        .values('model_type', 'category', 'line')
+    )
+    model_types = []
+    for c in configs:
+        if c['model_type'] not in model_types:
+            model_types.append(c['model_type'])
+
+    def _form_context(extra=None):
+        ctx = {
+            'users': User.objects.all(),
+            'model_types': model_types,
+            'configs_json': json.dumps(configs, ensure_ascii=False),
+        }
+        if extra:
+            ctx.update(extra)
+        return ctx
+
     if request.method == 'POST':
         code = request.POST.get('code')
         name = request.POST.get('name')
@@ -36,36 +59,34 @@ def equipment_create(request):
         install_date = request.POST.get('install_date')
         status = request.POST.get('status', 'active')
         responsible_id = request.POST.get('responsible')
-
-        # === 必填 + 唯一性校验 ===
         rfid_card = request.POST.get('rfid_card')
+        station = request.POST.get('station', '').strip()
+        line = request.POST.get('line', '').strip()
+        model_type = request.POST.get('model_type', '').strip()
+        area = request.POST.get('area', '')
+        category = request.POST.get('category', '').strip()
+        eq_type = request.POST.get('eq_type', '')
+
         if not rfid_card or not rfid_card.strip():
             messages.error(request, '❌ RFID卡号不能为空！')
-            users = User.objects.all()
-            return render(request, 'core/equipment_create.html', {'users': users})
+            return render(request, 'core/equipment_create.html', _form_context())
 
         if not code or not code.strip():
             messages.error(request, '❌ 设备编号不能为空！')
-            users = User.objects.all()
-            return render(request, 'core/equipment_create.html', {'users': users})
+            return render(request, 'core/equipment_create.html', _form_context())
 
         if Equipment.objects.filter(code=code).exists():
             messages.error(request, '❌ 设备编号已存在！请使用新的编号。')
-            users = User.objects.all()
-            return render(request, 'core/equipment_create.html', {'users': users})
+            return render(request, 'core/equipment_create.html', _form_context())
 
         if Equipment.objects.filter(rfid_card=rfid_card).exists():
             messages.error(request, '❌ RFID卡号已存在！请使用新的卡号。')
-            users = User.objects.all()
-            return render(request, 'core/equipment_create.html', {'users': users})
+            return render(request, 'core/equipment_create.html', _form_context())
 
-        # === 创建设备 ===
-        station = request.POST.get('station')
-        line = request.POST.get('line')
-        model_type = request.POST.get('model_type')
-        area = request.POST.get('area')
-        category = request.POST.get('category')
-        eq_type = request.POST.get('eq_type')
+        # 机种/线别建议在配置表中（不强制拦截，避免紧急建档失败；你要强制可打开下面注释）
+        # if model_type and not ProductionLineConfig.objects.filter(is_active=True, model_type=model_type).exists():
+        #     messages.error(request, '机种不在产线配置表中，请先在后台添加！')
+        #     return render(request, 'core/equipment_create.html', _form_context())
 
         equipment = Equipment.objects.create(
             code=code.strip(),
@@ -74,20 +95,19 @@ def equipment_create(request):
             location=location,
             install_date=install_date,
             status=status,
-            responsible_id=responsible_id,
+            responsible_id=responsible_id or None,
             rfid_card=rfid_card.strip(),
             station=station,
             line=line,
             model_type=model_type,
             area=area,
             category=category,
-            eq_type=eq_type
+            eq_type=eq_type,
         )
-        messages.success(request, '✅ 设备创建成功！')
+        messages.success(request, f'✅ 设备 {equipment.code} 已创建')
         return redirect('core:equipment_list')
 
-    users = User.objects.all()
-    return render(request, 'core/equipment_create.html', {'users': users})
+    return render(request, 'core/equipment_create.html', _form_context())
 
 
 @login_required
@@ -132,25 +152,47 @@ def dashboard(request):
 
 @login_required
 def equipment_edit(request, pk):
-    """编辑设备 - 加强RFID卡号和设备编号唯一性校验"""
-    equipment = Equipment.objects.get(pk=pk)
+    """编辑设备（机种/类别/线别读配置表）"""
+    from issues.issues_models import ProductionLineConfig
+    import json
+
+    equipment = get_object_or_404(Equipment, pk=pk)
+
+    configs = list(
+        ProductionLineConfig.objects.filter(is_active=True)
+        .order_by('order', 'model_type', 'category', 'line')
+        .values('model_type', 'category', 'line')
+    )
+    model_types = []
+    for c in configs:
+        if c['model_type'] not in model_types:
+            model_types.append(c['model_type'])
+
+    # 若当前机种不在配置表，也放进下拉，避免显示空白
+    if equipment.model_type and equipment.model_type not in model_types:
+        model_types.insert(0, equipment.model_type)
+
+    context = {
+        'equipment': equipment,
+        'model_types': model_types,
+        'configs_json': json.dumps(configs, ensure_ascii=False),
+    }
 
     if request.method == 'POST':
         name = request.POST.get('name')
-        station = request.POST.get('station')
-        line = request.POST.get('line')
+        station = request.POST.get('station', '').strip()
+        line = request.POST.get('line', '').strip()
         rfid_card = request.POST.get('rfid_card')
-        area = request.POST.get('area')
-        category = request.POST.get('category')
-        eq_type = request.POST.get('eq_type')
+        area = request.POST.get('area', '').strip()
+        category = request.POST.get('category', '').strip()
+        eq_type = request.POST.get('eq_type', '').strip()
+        model_type = request.POST.get('model_type', '').strip()
 
-        # === 唯一性校验（排除当前设备自身）===
         if rfid_card and rfid_card.strip():
             if Equipment.objects.filter(rfid_card=rfid_card.strip()).exclude(pk=pk).exists():
-                messages.error(request, '❌ 该RFID卡号已被其他设备使用！请使用新的卡号。')
-                return render(request, 'core/equipment_edit.html', {'equipment': equipment})
+                messages.error(request, '❌ 该RFID卡号已被其他设备使用！')
+                return render(request, 'core/equipment_edit.html', context)
 
-        # === 保存修改 ===
         equipment.name = name
         equipment.station = station
         equipment.line = line
@@ -158,13 +200,13 @@ def equipment_edit(request, pk):
         equipment.area = area
         equipment.category = category
         equipment.eq_type = eq_type
+        equipment.model_type = model_type
         equipment.save()
 
         messages.success(request, '✅ 设备编辑成功！')
         return redirect('core:equipment_list')
 
-    return render(request, 'core/equipment_edit.html', {'equipment': equipment})
-
+    return render(request, 'core/equipment_edit.html', context)
 
 @login_required
 def equipment_delete(request, pk):

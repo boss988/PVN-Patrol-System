@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}{{ model }} {{ line }} 站别明细{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 mt-3">
+    <div class="mb-3">
+        <a href="{% url 'issues:equipment_analytics_lines' model mode point %}" class="text-decoration-none">
+            ← 返回线体明细
+        </a>
+        <h3 class="mt-2">
+            {{ model }} · {{ title_point }} · {{ line }} · 站别明细Chi tiết trạm
+        </h3>
+    </div>
+
+    <div class="row g-3">
+        <!-- 站别表 -->
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold">各站异常时间Theo trạm</div>
+                <div class="card-body p-0">
+                    <table class="table table-bordered table-hover table-sm mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>站别Trạm</th>
+                                <th>异常时间 (min)</th>
+                                <th>记录数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in station_details %}
+                            <tr>
+                                <td>{{ row.station }}</td>
+                                <td class="fw-bold">{{ row.minutes }}</td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted py-3">无数据</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 类别汇总 -->
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold">问题类别Loại vấn đề</div>
+                <div class="card-body p-0">
+                    <table class="table table-bordered table-sm mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>类别</th>
+                                <th>时间(min)</th>
+                                <th>条数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in category_details %}
+                            <tr>
+                                <td class="text-start">{{ row.name }}</td>
+                                <td class="fw-bold">{{ row.minutes }}</td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted py-3">无数据</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

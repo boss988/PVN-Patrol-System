@@ -85,7 +85,28 @@
                     <!--                    <li><a class="dropdown-item" href="{% url 'patrol_analytics:dashboard' %}">📊 点检问题汇总看板</a></li>-->
                 </ul>
             </li>
-            <!--                <li class="nav-item"><a class="nav-link" href="{% url 'issues:global_issues_list' %}">{% trans "问题点记录" %}</a></li>-->
+
+            <!-- ==================== 设备异常分析下拉 ==================== -->
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="equipIssueDropdown" role="button"
+                   data-bs-toggle="dropdown" aria-expanded="false">
+                    📊 设备异常分析Phân tích bất thường thiết bị
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="equipIssueDropdown">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'issues:global_issues_list' %}">
+                            📋 异常记录列表Danh sách bất thường
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'issues:equipment_analytics' %}">
+                            📊 异常分析看板Bảng phân tích
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+
             <!-- ==================== 点检管理下拉菜单（把两个功能合并在一起） ==================== -->
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="patrolDropdown" role="button" data-bs-toggle="dropdown"
@@ -220,7 +241,5 @@
     setInterval(updateMarquee, 8000);
     updateMarquee();
 </script>
-</body>
-</html>
 </body>
 </html>

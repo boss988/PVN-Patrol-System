@@ -13,6 +13,15 @@ from .issues_views import (
     patrol_update_problem,  # ← 新增的函数
     marquee_notice_manage,
     marquee_content_api,
+    issue_detail, # ← 新增3个设备问题点函数
+    issue_edit,
+    issue_delete,
+    equipment_issue_export,
+    # equipment_analytics_dashboard,# ← 问题点分析
+    equipment_analytics_home,
+    equipment_analytics_trend,
+    equipment_analytics_lines,
+    equipment_analytics_stations,
 )
 
 app_name = 'issues'
@@ -46,4 +55,19 @@ urlpatterns = [
   # 新增公屏路由
     path('patrol/marquee-notice/', marquee_notice_manage, name='marquee_notice_manage'),
     path('patrol/marquee-content/', marquee_content_api, name='marquee_content_api'),
+   # 新增设备异常（不依赖某个设备 pk，表单里自己选机种/线/站）
+    path('issues/create/', issue_create, name='issue_create_global'),
+    path('issues/<int:pk>/detail/', issue_detail, name='issue_detail'),
+    path('issues/<int:pk>/edit/', issue_edit, name='issue_edit'),
+    path('issues/<int:pk>/delete/', issue_delete, name='issue_delete'),
+    path('issues/export/', equipment_issue_export, name='equipment_issue_export'),
+    # ---------- 设备异常分析看板（拆分页面） ----------
+    path('issues/analytics/', equipment_analytics_home, name='equipment_analytics'),
+    path('issues/analytics/<str:model>/', equipment_analytics_trend, name='equipment_analytics_trend'),
+    path('issues/analytics/<str:model>/<str:mode>/<str:point>/', equipment_analytics_lines, name='equipment_analytics_lines'),
+    path(
+    'issues/analytics/<str:model>/<str:mode>/<str:point>/line/<path:line>/',
+    equipment_analytics_stations,
+    name='equipment_analytics_stations',
+),
 ]

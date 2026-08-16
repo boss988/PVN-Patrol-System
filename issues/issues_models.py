@@ -2,6 +2,51 @@ from django.db import models
 from core.core_models import Equipment
 from datetime import datetime
 
+
+# ==================== 设备异常问题类别（独立管理，可后台增减） ====================
+class EquipmentIssueCategory(models.Model):
+    """
+    设备异常问题类别
+    用途：录入生产异常时选择（硬件问题 / 软件问题 / 其它...）
+    后台可随时新增、修改、停用
+    """
+    name = models.CharField(max_length=50, unique=True, verbose_name="类别名称")
+    order = models.PositiveIntegerField(default=0, verbose_name="排序（数字越小越靠前）")
+    is_active = models.BooleanField(default=True, verbose_name="是否启用")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        verbose_name = "设备异常问题类别"
+        verbose_name_plural = "设备异常问题类别"
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.name
+
+# ==================== 产线层级配置（仅设备异常用，与点检无关） ====================
+class ProductionLineConfig(models.Model):
+    """
+    机种 → 类别 → 线体 固定关系
+    站别仍从设备总表按线体带出，不写在本表
+    """
+    model_type = models.CharField(max_length=50, verbose_name="机种")
+    category = models.CharField(max_length=50, verbose_name="类别")
+    line = models.CharField(max_length=50, verbose_name="线体")
+    supervisor = models.CharField(max_length=100, blank=True, default='', verbose_name="默认主管")
+    order = models.PositiveIntegerField(default=0, verbose_name="排序")
+    is_active = models.BooleanField(default=True, verbose_name="是否启用")
+    remark = models.CharField(max_length=200, blank=True, default='', verbose_name="备注")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "产线层级配置"
+        verbose_name_plural = "产线层级配置"
+        ordering = ['order', 'model_type', 'category', 'line']
+        unique_together = [('model_type', 'category', 'line')]
+
+    def __str__(self):
+        return f"{self.model_type} / {self.category} / {self.line}"
+
 class EquipmentIssue(models.Model):
     """
     升级版问题记录模型（适配新Excel格式）
@@ -13,6 +58,24 @@ class EquipmentIssue(models.Model):
     desc = models.TextField(verbose_name="异常现象及原因")
     occur_date = models.DateField(verbose_name="发生日期")
     severity = models.IntegerField(choices=[(1,'低'),(2,'中'),(3,'高')], default=2)
+    # ==================== 问题类别（外键，新建时建议必选，历史数据允许空） ====================
+    category = models.ForeignKey(
+        EquipmentIssueCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="问题类别",
+        related_name="equipment_issues"
+    )
+    # ==================== 责任主管 + 备用字段 ====================
+    supervisor = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="责任主管"
+    )
+    # 三个备用字段，减少以后改库
+    spare_field_1 = models.CharField(max_length=200, blank=True, default='', verbose_name="备用字段1")
+    spare_field_2 = models.CharField(max_length=200, blank=True, default='', verbose_name="备用字段2")
+    spare_field_3 = models.CharField(max_length=200, blank=True, default='', verbose_name="备用字段3")
     root_cause = models.TextField(blank=True, verbose_name="处理方法")
     reoccur_status = models.BooleanField(default=False, verbose_name="再次发生")
     source_excel = models.CharField(max_length=200, blank=True)
@@ -170,3 +233,4 @@ class MarqueeNotice(models.Model):
     def __str__(self):
         status = "启用" if self.is_active else "已关闭"
         return f"[{status}] {self.content[:30]}"
+

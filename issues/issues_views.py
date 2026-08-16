@@ -15,6 +15,15 @@ from .issues_models import PatrolIssue, PatrolCategory
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
+from .issues_models import EquipmentIssue, EquipmentIssueCategory
+from core.core_models import Equipment
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from .issues_models import EquipmentIssue, EquipmentIssueCategory, ProductionLineConfig
+
+
 
 class IssueForm(forms.ModelForm):
     class Meta:
@@ -48,6 +57,15 @@ MARQUEE_NOTICE_USERS = [
     'perry_chen',
     # 以后要加账号，直接写在这里
 ]
+
+# 设备异常：可编辑/删除的白名单（以后要加账号写这里）
+EQUIPMENT_ISSUE_EDIT_USERS = [
+    'perry_chen',
+    's20038978',
+    'V25020512',
+    'V25018772',
+]
+
 
 
 # ==================== 新增：跑马灯日志辅助函数（只在新增记录时使用） ====================
@@ -328,109 +346,218 @@ def patrol_delete(request, pk):
 @login_required
 def global_issues_list(request):
     """
-    全局问题点列表 - 已改成和设计模块完全一致的风格
-    支持搜索 + 绿条 + 从设备详情页自动选中当前设备
+    设备异常分析 - 全局列表
+    支持：日期、机种、线体、主管、严重度、关键词 + 异常时间排序 + 分页
     """
-    from search.search_forms import GlobalSearchForm
-    from django.db import models
+    from django.core.paginator import Paginator
+    from core.core_models import Equipment
 
-    print("=== global_issues_list 被调用 ===")
-    print("完整请求URL:", request.get_full_path())
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
+    model_type = request.GET.get('model_type', '').strip()
+    line = request.GET.get('line', '').strip()
+    supervisor = request.GET.get('supervisor', '').strip()
+    severity = request.GET.get('severity', '').strip()
+    keyword = request.GET.get('keyword', '').strip()
+    sort = request.GET.get('sort', '').strip()  # time_desc / time_asc
 
-    form = GlobalSearchForm(request.GET)
-    issues = EquipmentIssue.objects.all().order_by('-occur_date')
-    selected_equipment = None
+    issues = EquipmentIssue.objects.select_related(
+        'equipment', 'category'
+    )
 
-    # ==================== 自动选中设备（从雷达图跳转时带参数） ====================
-    equipment_pk = request.GET.get('equipment_pk') or request.GET.get('equipment_id')
-    print(f"收到参数 equipment_pk/equipment_id: {equipment_pk}")
+    if start_date:
+        issues = issues.filter(occur_date__gte=start_date)
+    if end_date:
+        issues = issues.filter(occur_date__lte=end_date)
+    if model_type:
+        issues = issues.filter(equipment__model_type=model_type)
+    if line:
+        issues = issues.filter(equipment__line=line)
+    if supervisor:
+        issues = issues.filter(supervisor__icontains=supervisor)
+    if severity:
+        issues = issues.filter(severity=severity)
+    if keyword:
+        issues = issues.filter(desc__icontains=keyword)
 
-    if equipment_pk:
-        selected_equipment = Equipment.objects.filter(pk=equipment_pk).first()
-        print(f"✅ 成功选中设备: {selected_equipment}")
+    # 排序：默认按日期倒序；可按异常时间
+    if sort == 'time_asc':
+        issues = issues.order_by('abnormal_work_time', '-occur_date')
+    elif sort == 'time_desc':
+        issues = issues.order_by('-abnormal_work_time', '-occur_date')
+    else:
+        issues = issues.order_by('-occur_date', '-id')
 
-    # ==================== 手动搜索逻辑 ====================
-    if form.is_valid() and not selected_equipment:
-        id_search = form.cleaned_data['id_search'].strip()
-        name = form.cleaned_data['name'].strip()
-        area = form.cleaned_data['area'].strip()
-        line = form.cleaned_data['line'].strip()
-        model_type = form.cleaned_data['model_type'].strip()
-        station = form.cleaned_data['station'].strip()
+    paginator = Paginator(issues, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
-        queryset = Equipment.objects.all()
-        if id_search:
-            queryset = queryset.filter(models.Q(code__icontains=id_search) | models.Q(rfid_card__icontains=id_search))
-        if name:
-            queryset = queryset.filter(name__icontains=name)
-        if area:
-            queryset = queryset.filter(area__icontains=area)
-        if line:
-            queryset = queryset.filter(line__icontains=line)
-        if model_type:
-            queryset = queryset.filter(model_type__icontains=model_type)
-        if station:
-            queryset = queryset.filter(station__icontains=station)
+    model_types = (
+        Equipment.objects.exclude(model_type__isnull=True).exclude(model_type='')
+        .values_list('model_type', flat=True).distinct().order_by('model_type')
+    )
+    lines = (
+        Equipment.objects.exclude(line__isnull=True).exclude(line='')
+        .values_list('line', flat=True).distinct().order_by('line')
+    )
 
-        selected_equipment = queryset.first()
-        print(f"手动搜索选中设备: {selected_equipment}")
-
-    # 如果选中了设备，只显示该设备的问题点
-    if selected_equipment:
-        issues = issues.filter(equipment=selected_equipment)
-        print(f"过滤后 issues 数量: {issues.count()} 条")
-
-    return render(request, 'issues/global_issues_list.html', {
-        'issues': issues,
-        'form': form,
-        'selected_equipment': selected_equipment,
-    })
+    context = {
+        'page_obj': page_obj,
+        'issues': page_obj,
+        'model_types': model_types,
+        'lines': lines,
+        'supervisor_choices': SUPERVISOR_CHOICES,
+        'start_date': start_date,
+        'end_date': end_date,
+        'selected_model_type': model_type,
+        'selected_line': line,
+        'selected_supervisor': supervisor,
+        'selected_severity': severity,
+        'keyword': keyword,
+        'sort': sort,
+    }
+    return render(request, 'issues/global_issues_list.html', context)
 
 
 @login_required
-def issue_create(request, equipment_pk):
-    """新增问题点 - 自动生成 issue_code"""
-    equipment = get_object_or_404(Equipment, pk=equipment_pk)
+def issue_create(request, equipment_pk=None):
+    """
+    新增设备异常
+    机种→类别→线体：来自 ProductionLineConfig
+    站别：来自设备总表（按线体）
+    """
+    # ---------- 配置表数据（给前端联动） ----------
+    configs = list(
+        ProductionLineConfig.objects.filter(is_active=True)
+        .order_by('order', 'model_type', 'category', 'line')
+        .values('model_type', 'category', 'line', 'supervisor')
+    )
+
+    # 机种只来自配置表（后台加什么，下拉就有什么）
+    model_types = []
+    for c in configs:
+        if c['model_type'] not in model_types:
+            model_types.append(c['model_type'])
+
+    # 站别：按线体从设备表汇总 { line: [station, ...] }
+    from collections import defaultdict
+    stations_by_line = defaultdict(list)
+    for row in Equipment.objects.exclude(line__isnull=True).exclude(line='').exclude(station__isnull=True).exclude(station='').values('line', 'station'):
+        line = row['line'].strip()
+        st = row['station'].strip()
+        if st and st not in stations_by_line[line]:
+            stations_by_line[line].append(st)
+    for k in stations_by_line:
+        stations_by_line[k].sort()
+
+    # 设备列表（选站后匹配 equipment_id）
+    equipments = list(
+        Equipment.objects.all().values('id', 'code', 'name', 'model_type', 'line', 'station')
+    )
+
+    categories = EquipmentIssueCategory.objects.filter(is_active=True).order_by('order')
 
     if request.method == 'POST':
-        form = IssueForm(request.POST)
-        photos = request.FILES.getlist('photos')
+        model_type = request.POST.get('model_type', '').strip()
+        category_line = request.POST.get('line_category', '').strip()  # 产线类别 Auto/manual
+        line = request.POST.get('line', '').strip()
+        station = request.POST.get('station', '').strip()
+        equipment_id = request.POST.get('equipment_id', '').strip()
 
-        if form.is_valid():
-            issue = form.save(commit=False)
-            issue.equipment = equipment
+        desc = request.POST.get('desc', '').strip()
+        occur_date = request.POST.get('occur_date', '').strip()
+        abnormal_work_time = request.POST.get('abnormal_work_time', '0').strip() or '0'
+        severity = request.POST.get('severity', '2')
+        root_cause = request.POST.get('root_cause', '').strip()
+        category_id = request.POST.get('category', '').strip()  # 问题类别（硬件/软件）
+        supervisor = request.POST.get('supervisor', '').strip()
 
-            # 自动生成问题码：20260318-001
-            today = datetime.now().strftime('%Y%m%d')
-            last = EquipmentIssue.objects.filter(issue_code__startswith=today).order_by('-issue_code').first()
-            seq = int(last.issue_code.split('-')[-1]) + 1 if last and last.issue_code else 1
-            issue.issue_code = f"{today}-{seq:03d}"
+        if not desc or not occur_date:
+            messages.error(request, '异常现象和发生日期为必填！')
+            return redirect(request.path)
 
-            issue.save()
+        if not model_type or not ProductionLineConfig.objects.filter(
+                is_active=True, model_type=model_type
+        ).exists():
+            messages.error(request, '机种不在配置表中，请联系管理员在后台添加！')
+            return redirect(request.path)
 
-            # 保存照片
-            photo_urls = []
-            for photo in photos:
-                if photo:
-                    issue.photo = photo
-                    issue.save()
-                    photo_urls.append(issue.photo.url)
+        # 校验线体是否在配置表中
+        cfg_ok = ProductionLineConfig.objects.filter(
+            is_active=True, model_type=model_type, line=line
+        ).exists()
+        if not line or not cfg_ok:
+            messages.error(request, '请选择配置表中的有效线体！')
+            return redirect(request.path)
 
-            issue.photos = photo_urls
-            issue.save()
+        # 匹配设备
+        equipment = None
+        if equipment_id:
+            equipment = Equipment.objects.filter(id=equipment_id).first()
+        if not equipment and line and station:
+            equipment = Equipment.objects.filter(line=line, station=station).first()
+        if not equipment:
+            messages.error(request, '未匹配到设备，请检查线体/站别或设备总表！')
+            return redirect(request.path)
 
-            messages.success(request, f'✅ 保存成功！问题码：{issue.issue_code}')
-            return redirect('issues:global_issues_list')
+        # 无手选主管时，用配置表默认主管
+        if not supervisor:
+            cfg = ProductionLineConfig.objects.filter(
+                is_active=True, model_type=model_type, line=line
+            ).first()
+            if cfg:
+                supervisor = cfg.supervisor or ''
+
+        # 问题码
+        today_str = timezone.now().strftime('%Y%m%d')
+        last = (
+            EquipmentIssue.objects.filter(issue_code__startswith=today_str)
+            .order_by('-issue_code').first()
+        )
+        if last and last.issue_code:
+            try:
+                seq = int(last.issue_code.split('-')[-1]) + 1
+            except Exception:
+                seq = 1
         else:
-            print("❌ 表单验证失败:", form.errors)
+            seq = 1
+        issue_code = f"{today_str}-{seq:03d}"
+        risk_id = f"RISK-{issue_code}"
 
-    else:
-        form = IssueForm()
+        issue = EquipmentIssue.objects.create(
+            equipment=equipment,
+            issue_code=issue_code,
+            desc=desc,
+            occur_date=occur_date,
+            severity=int(severity) if str(severity).isdigit() else 2,
+            root_cause=root_cause,
+            abnormal_work_time=int(abnormal_work_time) if str(abnormal_work_time).isdigit() else 0,
+            work_time_type='',
+            category_id=category_id if category_id else None,
+            risk_id=risk_id,
+            supervisor=supervisor,
+        )
 
-    return render(request, 'issues/issue_form.html', {
-        'form': form,
-        'equipment': equipment,
-    })
+        photos = request.FILES.getlist('photos')
+        for f in photos:
+            if f and not issue.photo:
+                issue.photo = f
+                issue.save()
+                break
+
+        messages.success(request, f'✅ 已新增设备异常：{issue_code}')
+        return redirect('issues:global_issues_list')
+
+    import json
+    context = {
+        'model_types': model_types,
+        'configs_json': json.dumps(configs, ensure_ascii=False),
+        'stations_by_line_json': json.dumps(dict(stations_by_line), ensure_ascii=False),
+        'equipments_json': json.dumps(equipments, ensure_ascii=False),
+        'categories': categories,
+        'supervisor_choices': SUPERVISOR_CHOICES,
+        'today': timezone.now().date().isoformat(),
+    }
+    return render(request, 'issues/issue_form.html', context)
 
 @login_required
 def import_issues(request):
@@ -659,7 +786,7 @@ def marquee_notice_manage(request):
     })
 
 
-@login_required
+
 def marquee_content_api(request):
     """
     跑马灯内容接口（方案B：公屏优先，没有才显示点检日志）
@@ -688,3 +815,428 @@ def marquee_content_api(request):
         pass
 
     return HttpResponse('🚨 系统运行正常 | 等待最新信息...', content_type='text/plain; charset=utf-8')
+
+
+# ==================== 设备异常：详情 / 编辑 / 删除 ====================
+@login_required
+def issue_detail(request, pk):
+    """设备异常详情"""
+    issue = get_object_or_404(
+        EquipmentIssue.objects.select_related('equipment', 'category'),
+        pk=pk
+    )
+    can_edit = request.user.username in EQUIPMENT_ISSUE_EDIT_USERS
+    return render(request, 'issues/issue_detail.html', {
+        'issue': issue,
+        'can_edit': can_edit,
+    })
+
+
+@login_required
+def issue_edit(request, pk):
+    """编辑设备异常（白名单）"""
+    if request.user.username not in EQUIPMENT_ISSUE_EDIT_USERS:
+        messages.error(request, '你没有权限编辑！')
+        return redirect('issues:global_issues_list')
+
+    issue = get_object_or_404(EquipmentIssue, pk=pk)
+    categories = EquipmentIssueCategory.objects.filter(is_active=True).order_by('order')
+
+    if request.method == 'POST':
+        issue.desc = request.POST.get('desc', '').strip()
+        issue.occur_date = request.POST.get('occur_date') or issue.occur_date
+        try:
+            issue.abnormal_work_time = int(request.POST.get('abnormal_work_time') or 0)
+        except Exception:
+            issue.abnormal_work_time = 0
+        try:
+            issue.severity = int(request.POST.get('severity') or 2)
+        except Exception:
+            issue.severity = 2
+        issue.root_cause = request.POST.get('root_cause', '').strip()
+        issue.supervisor = request.POST.get('supervisor', '').strip()
+        cat_id = request.POST.get('category', '').strip()
+        issue.category_id = cat_id if cat_id else None
+
+        issue.can_import_maintenance = bool(request.POST.get('can_import_maintenance'))
+        issue.maintenance_id = request.POST.get('maintenance_id', '').strip()
+        issue.can_import_design = bool(request.POST.get('can_import_design'))
+        issue.design_id = request.POST.get('design_id', '').strip()
+        issue.can_import_training = bool(request.POST.get('can_import_training'))
+        issue.training_id = request.POST.get('training_id', '').strip()
+        issue.can_import_repair = bool(request.POST.get('can_import_repair'))
+        issue.repair_id = request.POST.get('repair_id', '').strip()
+
+        issue.save()
+        messages.success(request, '✅ 已保存修改')
+        return redirect('issues:issue_detail', pk=issue.pk)
+
+    return render(request, 'issues/issue_edit.html', {
+        'issue': issue,
+        'categories': categories,
+        'supervisor_choices': SUPERVISOR_CHOICES,
+    })
+
+
+@login_required
+def issue_delete(request, pk):
+    """删除设备异常（白名单，需 POST 确认）"""
+    if request.user.username not in EQUIPMENT_ISSUE_EDIT_USERS:
+        messages.error(request, '你没有权限删除！')
+        return redirect('issues:global_issues_list')
+
+    issue = get_object_or_404(EquipmentIssue, pk=pk)
+    if request.method == 'POST':
+        code = issue.issue_code
+        issue.delete()
+        messages.success(request, f'✅ 已删除：{code}')
+        return redirect('issues:global_issues_list')
+
+    return render(request, 'issues/issue_confirm_delete.html', {'issue': issue})
+
+
+@login_required
+def equipment_issue_export(request):
+    """导出勾选的设备异常记录为 Excel"""
+    from django.http import HttpResponse
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        messages.error(request, '服务器未安装 openpyxl，请执行: pip install openpyxl')
+        return redirect('issues:global_issues_list')
+
+    if request.method != 'POST':
+        return redirect('issues:global_issues_list')
+
+    selected_ids_str = request.POST.get('selected_ids', '')
+    if not selected_ids_str:
+        messages.warning(request, '请先勾选要导出的记录')
+        return redirect('issues:global_issues_list')
+
+    selected_ids = [int(x) for x in selected_ids_str.split(',') if x.strip().isdigit()]
+    issues = EquipmentIssue.objects.filter(id__in=selected_ids).select_related(
+        'equipment', 'category'
+    ).order_by('-occur_date')
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "设备异常记录"
+
+    headers = ['日期', '机种', '线体', '站别', '异常时间(min)', '异常现象', '改善方式',
+               '类别', '严重度', '主管', '问题码', 'RISK ID']
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+
+    for row_idx, issue in enumerate(issues, start=2):
+        eq = issue.equipment
+        ws.cell(row=row_idx, column=1, value=issue.occur_date.strftime('%Y-%m-%d') if issue.occur_date else '')
+        ws.cell(row=row_idx, column=2, value=getattr(eq, 'model_type', '') or '')
+        ws.cell(row=row_idx, column=3, value=getattr(eq, 'line', '') or '')
+        ws.cell(row=row_idx, column=4, value=getattr(eq, 'station', '') or '')
+        ws.cell(row=row_idx, column=5, value=issue.abnormal_work_time or 0)
+        ws.cell(row=row_idx, column=6, value=issue.desc or '')
+        ws.cell(row=row_idx, column=7, value=issue.root_cause or '')
+        ws.cell(row=row_idx, column=8, value=issue.category.name if issue.category else '')
+        ws.cell(row=row_idx, column=9, value=issue.get_severity_display())
+        ws.cell(row=row_idx, column=10, value=issue.supervisor or '')
+        ws.cell(row=row_idx, column=11, value=issue.issue_code or '')
+        ws.cell(row=row_idx, column=12, value=issue.risk_id or '')
+
+    for i, width in enumerate([12, 12, 14, 10, 12, 40, 30, 16, 8, 22, 14, 18], start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    # 文件名用英文，避免浏览器乱码/识别失败
+    response['Content-Disposition'] = 'attachment; filename="equipment_issues.xlsx"'
+    wb.save(response)
+    return response
+
+# ==================== 设备异常分析看板（第二期） ====================
+# ==================== 设备异常分析看板（拆分：总览 / 趋势 / 线体） ====================
+# ==================== 设备异常分析看板 ====================
+def get_analytics_model_types():
+    """
+    分析看板机种列表：只从产线配置表读取（后台加什么就有什么）
+    """
+    seen = []
+    for row in ProductionLineConfig.objects.filter(is_active=True).order_by('order', 'model_type'):
+        if row.model_type not in seen:
+            seen.append(row.model_type)
+    return seen
+
+
+@login_required
+def equipment_analytics_home(request):
+    """
+    总览页：
+    - 上方：BNC / PRO / Arias 卡片（今日、本周）
+    - 下方：三个机种各自的折线图（按天14天 / 按周8周）
+    - 点击图上的点 → 直接进线体明细页
+    """
+    from django.db.models import Sum
+    from django.utils import timezone
+    from datetime import timedelta
+    import json
+
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+
+    # 每个机种可以单独选 day/week，参数：mode_BNC=day&mode_PRO=week ...
+    charts = []
+    cards = []
+
+    model_types = get_analytics_model_types()
+    for mt in model_types:
+        # ----- 卡片 -----
+        today_qs = EquipmentIssue.objects.filter(
+            equipment__model_type__icontains=mt, occur_date=today
+        )
+        week_qs = EquipmentIssue.objects.filter(
+            equipment__model_type__icontains=mt,
+            occur_date__gte=week_start, occur_date__lte=today
+        )
+        cards.append({
+            'model_type': mt,
+            'today_minutes': today_qs.aggregate(t=Sum('abnormal_work_time'))['t'] or 0,
+            'today_count': today_qs.count(),
+            'week_minutes': week_qs.aggregate(t=Sum('abnormal_work_time'))['t'] or 0,
+            'week_count': week_qs.count(),
+        })
+
+        # ----- 折线数据 -----
+        mode = request.GET.get(f'mode_{mt}', 'day').strip()
+        if mode not in ('day', 'week'):
+            mode = 'day'
+
+        labels, values, point_keys = [], [], []
+
+        if mode == 'day':
+            for i in range(13, -1, -1):
+                d = today - timedelta(days=i)
+                total = EquipmentIssue.objects.filter(
+                    equipment__model_type__icontains=mt, occur_date=d
+                ).aggregate(t=Sum('abnormal_work_time'))['t'] or 0
+                labels.append(d.strftime('%m-%d'))
+                values.append(total)
+                point_keys.append(d.strftime('%Y-%m-%d'))
+        else:
+            current_monday = week_start
+            for i in range(7, -1, -1):
+                ws = current_monday - timedelta(weeks=i)
+                we = ws + timedelta(days=6)
+                total = EquipmentIssue.objects.filter(
+                    equipment__model_type__icontains=mt,
+                    occur_date__gte=ws, occur_date__lte=we
+                ).aggregate(t=Sum('abnormal_work_time'))['t'] or 0
+                labels.append(f'W{ws.isocalendar()[1]:02d}')
+                values.append(total)
+                point_keys.append(ws.strftime('%Y-%m-%d'))
+
+        charts.append({
+            'model_type': mt,
+            'mode': mode,
+            'labels': json.dumps(labels, ensure_ascii=False),
+            'values': json.dumps(values),
+            'point_keys': json.dumps(point_keys),
+        })
+
+    return render(request, 'issues/equipment_analytics_home.html', {
+        'cards': cards,
+        'charts': charts,
+        'today': today,
+        'week_start': week_start,
+    })
+
+@login_required
+def equipment_analytics_trend(request, model):
+    """
+    趋势页：某个机种的按天14天 / 按周8周 折线图
+    """
+    from django.db.models import Sum
+    from django.utils import timezone
+    from datetime import timedelta
+    import json
+
+    model = (model or '').strip()
+    if model not in get_analytics_model_types():
+        messages.error(request, '机种不存在')
+        return redirect('issues:equipment_analytics')
+
+    mode = request.GET.get('mode', 'day').strip()
+    if mode not in ('day', 'week'):
+        mode = 'day'
+
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+
+    labels, values = [], []
+    # 同时保留「完整日期 / 周起止」，方便点击跳转
+    point_keys = []
+
+    if mode == 'day':
+        for i in range(13, -1, -1):
+            d = today - timedelta(days=i)
+            total = EquipmentIssue.objects.filter(
+                equipment__model_type__icontains=model, occur_date=d
+            ).aggregate(t=Sum('abnormal_work_time'))['t'] or 0
+            labels.append(d.strftime('%m-%d'))
+            values.append(total)
+            point_keys.append(d.strftime('%Y-%m-%d'))  # 跳转用完整日期
+    else:
+        current_monday = week_start
+        for i in range(7, -1, -1):
+            ws = current_monday - timedelta(weeks=i)
+            we = ws + timedelta(days=6)
+            total = EquipmentIssue.objects.filter(
+                equipment__model_type__icontains=model,
+                occur_date__gte=ws, occur_date__lte=we
+            ).aggregate(t=Sum('abnormal_work_time'))['t'] or 0
+            labels.append(f'W{ws.isocalendar()[1]:02d}')
+            values.append(total)
+            point_keys.append(ws.strftime('%Y-%m-%d'))  # 用该周周一作为 point
+
+    return render(request, 'issues/equipment_analytics_trend.html', {
+        'model': model,
+        'mode': mode,
+        'today': today,
+        'chart_labels': json.dumps(labels, ensure_ascii=False),
+        'chart_values': json.dumps(values),
+        'point_keys': json.dumps(point_keys),
+    })
+
+
+@login_required
+def equipment_analytics_lines(request, model, mode, point):
+    """
+    线体明细页：某机种 + 某天或某周 的各线体异常时间
+    point：day 模式为 YYYY-MM-DD；week 模式为该周周一 YYYY-MM-DD
+    """
+    from django.utils import timezone
+    from datetime import timedelta, datetime
+    from collections import defaultdict
+
+    model = (model or '').strip()
+    mode = (mode or '').strip()
+    point = (point or '').strip()
+
+    if model not in get_analytics_model_types() or mode not in ('day', 'week'):
+        messages.error(request, '参数错误')
+        return redirect('issues:equipment_analytics')
+
+    try:
+        base = datetime.strptime(point, '%Y-%m-%d').date()
+    except Exception:
+        messages.error(request, '日期参数错误')
+        return redirect('issues:equipment_analytics_trend', model=model)
+
+    if mode == 'day':
+        date_start = date_end = base
+        title_point = base.strftime('%Y-%m-%d')
+    else:
+        date_start = base
+        date_end = base + timedelta(days=6)
+        title_point = f'W{base.isocalendar()[1]:02d} ({date_start} ~ {date_end})'
+
+    qs = EquipmentIssue.objects.filter(
+        equipment__model_type__icontains=model,
+        occur_date__gte=date_start,
+        occur_date__lte=date_end,
+    ).select_related('equipment')
+
+    bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    for issue in qs:
+        line_name = (issue.equipment.line or '未填线体').strip() or '未填线体'
+        bucket[line_name]['minutes'] += issue.abnormal_work_time or 0
+        bucket[line_name]['count'] += 1
+
+    line_details = [
+        {'line': k, 'minutes': v['minutes'], 'count': v['count']}
+        for k, v in sorted(bucket.items(), key=lambda x: -x[1]['minutes'])
+    ]
+
+    return render(request, 'issues/equipment_analytics_lines.html', {
+        'model': model,
+        'mode': mode,
+        'point': point,
+        'title_point': title_point,
+        'line_details': line_details,
+    })
+
+
+@login_required
+def equipment_analytics_stations(request, model, mode, point, line):
+    """
+    站别明细页：某机种 + 某天/某周 + 某线体 → 各站异常时间 + 类别汇总
+    """
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
+    model = (model or '').strip()
+    mode = (mode or '').strip()
+    point = (point or '').strip()
+    line = (line or '').strip()
+
+    if model not in MODEL_TYPES_ANALYTICS or mode not in ('day', 'week'):
+        messages.error(request, '参数错误')
+        return redirect('issues:equipment_analytics')
+
+    try:
+        base = datetime.strptime(point, '%Y-%m-%d').date()
+    except Exception:
+        messages.error(request, '日期参数错误')
+        return redirect('issues:equipment_analytics_trend', model=model)
+
+    if mode == 'day':
+        date_start = date_end = base
+        title_point = base.strftime('%Y-%m-%d')
+    else:
+        date_start = base
+        date_end = base + timedelta(days=6)
+        title_point = f'W{base.isocalendar()[1]:02d} ({date_start} ~ {date_end})'
+
+    qs = EquipmentIssue.objects.filter(
+        equipment__model_type__icontains=model,
+        equipment__line=line,
+        occur_date__gte=date_start,
+        occur_date__lte=date_end,
+    ).select_related('equipment', 'category')
+
+    # 按站别汇总
+    station_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    # 按类别汇总（做小饼图用）
+    category_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+
+    for issue in qs:
+        st = (issue.equipment.station or '未填站别').strip() or '未填站别'
+        station_bucket[st]['minutes'] += issue.abnormal_work_time or 0
+        station_bucket[st]['count'] += 1
+
+        cat_name = issue.category.name if issue.category else '未分类'
+        category_bucket[cat_name]['minutes'] += issue.abnormal_work_time or 0
+        category_bucket[cat_name]['count'] += 1
+
+    station_details = [
+        {'station': k, 'minutes': v['minutes'], 'count': v['count']}
+        for k, v in sorted(station_bucket.items(), key=lambda x: -x[1]['minutes'])
+    ]
+    category_details = [
+        {'name': k, 'minutes': v['minutes'], 'count': v['count']}
+        for k, v in sorted(category_bucket.items(), key=lambda x: -x[1]['minutes'])
+    ]
+
+    return render(request, 'issues/equipment_analytics_stations.html', {
+        'model': model,
+        'mode': mode,
+        'point': point,
+        'line': line,
+        'title_point': title_point,
+        'station_details': station_details,
+        'category_details': category_details,
+    })
