@@ -64,7 +64,7 @@ def equipment_create(request):
         line = request.POST.get('line', '').strip()
         model_type = request.POST.get('model_type', '').strip()
         area = request.POST.get('area', '')
-        category = request.POST.get('category', '').strip()
+        category = category,  # 仅设备类别
         eq_type = request.POST.get('eq_type', '')
 
         if not rfid_card or not rfid_card.strip():

@@ -63,7 +63,7 @@
                 <div class="col-auto">
                     <label class="form-label mb-0 small">关键词Từ khóa</label>
                     <input type="text" name="keyword" class="form-control form-control-sm" value="{{ keyword }}"
-                           placeholder="异常现象" style="width:120px;">
+                           placeholder="现象/原因" style="width:120px;">
                 </div>
                 <input type="hidden" name="sort" value="{{ sort }}">
                 <div class="col-auto">
@@ -73,7 +73,6 @@
         </div>
     </div>
 
-    <!-- 导出用隐藏表单 -->
     <form method="post" action="{% url 'issues:equipment_issue_export' %}" id="exportForm">
         {% csrf_token %}
         <input type="hidden" name="selected_ids" id="selectedIds" value="">
@@ -87,8 +86,8 @@
                     <th style="width:36px;"><input type="checkbox" id="checkAll"></th>
                     <th style="width:90px;">日期Ngày</th>
                     <th style="width:70px;">机种Loại</th>
-                    <th style="width:100px;">线体Tuyến</th>
-                    <th style="width:60px;">站别Trạm</th>
+                    <th style="width:90px;">线体Tuyến</th>
+                    <th style="width:55px;">站别Trạm</th>
                     <th style="width:95px;">
                         异常时间Thời gian
                         <a href="?sort=time_desc&start_date={{ start_date }}&end_date={{ end_date }}&model_type={{ selected_model_type }}&line={{ selected_line }}&supervisor={{ selected_supervisor }}&severity={{ selected_severity }}&keyword={{ keyword }}"
@@ -96,8 +95,9 @@
                         <a href="?sort=time_asc&start_date={{ start_date }}&end_date={{ end_date }}&model_type={{ selected_model_type }}&line={{ selected_line }}&supervisor={{ selected_supervisor }}&severity={{ selected_severity }}&keyword={{ keyword }}"
                            title="从小到大" class="text-decoration-none">▲</a>
                     </th>
-                    <th style="min-width:140px;">异常现象Hiện tượng</th>
-                    <th style="min-width:120px;">改善方式Cách xử lý</th>
+                    <th style="min-width:110px;">异常现象Hiện tượng</th>
+                    <th style="min-width:140px;">原因(5Why)Nguyên nhân</th>
+                    <th style="min-width:100px;">改善方式Cách xử lý</th>
                     <th style="width:100px;">主管Chủ quản</th>
                     <th style="width:50px;">严重度</th>
                     <th style="width:70px;">照片Ảnh</th>
@@ -113,8 +113,9 @@
                     <td>{{ issue.equipment.line|default:"-" }}</td>
                     <td>{{ issue.equipment.station|default:"-" }}</td>
                     <td class="fw-bold">{{ issue.abnormal_work_time }}</td>
-                    <td class="text-start">{{ issue.desc|truncatechars:35 }}</td>
-                    <td class="text-start">{{ issue.root_cause|default:"-"|truncatechars:30 }}</td>
+                    <td class="text-start">{{ issue.desc|truncatechars:30 }}</td>
+                    <td class="text-start small">{{ issue.spare_field_1|default:"-"|truncatechars:40 }}</td>
+                    <td class="text-start">{{ issue.root_cause|default:"-"|truncatechars:25 }}</td>
                     <td class="small">{{ issue.supervisor|default:"-" }}</td>
                     <td>
                         {% if issue.severity == 3 %}<span class="badge bg-danger">高</span>
@@ -147,7 +148,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="12" class="text-muted py-4">暂无数据Không có dữ liệu</td>
+                    <td colspan="13" class="text-muted py-4">暂无数据Không có dữ liệu</td>
                 </tr>
                 {% endfor %}
                 </tbody>
@@ -178,9 +179,7 @@
     {% endif %}
 </div>
 
-
 <script>
-// 全选
 document.getElementById('checkAll').addEventListener('change', function () {
     var checked = this.checked;
     document.querySelectorAll('.row-check').forEach(function (cb) {
@@ -188,7 +187,6 @@ document.getElementById('checkAll').addEventListener('change', function () {
     });
 });
 
-// 导出选中（fetch + blob，避免下成 .htm）
 document.getElementById('btnExport').addEventListener('click', function () {
     var ids = [];
     document.querySelectorAll('.row-check:checked').forEach(function (cb) {
@@ -211,7 +209,6 @@ document.getElementById('btnExport').addEventListener('click', function () {
         if (!response.ok) {
             throw new Error('导出失败，状态码：' + response.status);
         }
-        // 看服务器是否真的返回 Excel
         var ct = response.headers.get('Content-Type') || '';
         if (ct.indexOf('spreadsheet') === -1 && ct.indexOf('octet-stream') === -1) {
             return response.text().then(function (t) {
@@ -235,6 +232,5 @@ document.getElementById('btnExport').addEventListener('click', function () {
         alert('导出失败：' + err.message);
     });
 });
-
 </script>
 {% endblock %}

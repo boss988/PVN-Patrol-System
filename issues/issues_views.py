@@ -464,6 +464,7 @@ def issue_create(request, equipment_pk=None):
         equipment_id = request.POST.get('equipment_id', '').strip()
 
         desc = request.POST.get('desc', '').strip()
+        cause_5w = request.POST.get('spare_field_1', '').strip()  # 异常原因（5个为什么）
         occur_date = request.POST.get('occur_date', '').strip()
         abnormal_work_time = request.POST.get('abnormal_work_time', '0').strip() or '0'
         severity = request.POST.get('severity', '2')
@@ -473,6 +474,10 @@ def issue_create(request, equipment_pk=None):
 
         if not desc or not occur_date:
             messages.error(request, '异常现象和发生日期为必填！')
+            return redirect(request.path)
+
+        if not cause_5w:
+            messages.error(request, '请填写异常原因（5个为什么）！')
             return redirect(request.path)
 
         if not model_type or not ProductionLineConfig.objects.filter(
@@ -527,6 +532,7 @@ def issue_create(request, equipment_pk=None):
             equipment=equipment,
             issue_code=issue_code,
             desc=desc,
+            spare_field_1=cause_5w,  # ← 加上这一行
             occur_date=occur_date,
             severity=int(severity) if str(severity).isdigit() else 2,
             root_cause=root_cause,
@@ -620,6 +626,7 @@ def import_issues(request):
                     equipment=equipment,
                     issue_code=f"EX-{datetime.now().strftime('%Y%m%d')}-{count+1:03d}",
                     desc=desc,
+                    spare_field_1=cause_5w,
                     occur_date=occur_date,
                     abnormal_work_time=int(minutes),
                     work_time_type=str(row.get('异常工时甄别（硬件/软件/其它)', '')),
@@ -844,6 +851,7 @@ def issue_edit(request, pk):
 
     if request.method == 'POST':
         issue.desc = request.POST.get('desc', '').strip()
+        issue.spare_field_1 = request.POST.get('spare_field_1', '').strip()
         issue.occur_date = request.POST.get('occur_date') or issue.occur_date
         try:
             issue.abnormal_work_time = int(request.POST.get('abnormal_work_time') or 0)
@@ -897,7 +905,7 @@ def issue_delete(request, pk):
 
 @login_required
 def equipment_issue_export(request):
-    """导出勾选的设备异常记录为 Excel"""
+    """导出勾选的设备异常记录为 Excel（含异常原因 5 Why）"""
     from django.http import HttpResponse
     try:
         from openpyxl import Workbook
@@ -924,8 +932,12 @@ def equipment_issue_export(request):
     ws = wb.active
     ws.title = "设备异常记录"
 
-    headers = ['日期', '机种', '线体', '站别', '异常时间(min)', '异常现象', '改善方式',
-               '类别', '严重度', '主管', '问题码', 'RISK ID']
+    # 表头：异常现象 与 改善方式 之间增加「原因(5Why)」
+    headers = [
+        '日期', '机种', '线体', '站别', '异常时间(min)',
+        '异常现象', '原因(5Why)', '改善方式',
+        '类别', '严重度', '主管', '问题码', 'RISK ID'
+    ]
     for col, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col, value=header)
         cell.font = Font(bold=True, color="FFFFFF")
@@ -940,20 +952,21 @@ def equipment_issue_export(request):
         ws.cell(row=row_idx, column=4, value=getattr(eq, 'station', '') or '')
         ws.cell(row=row_idx, column=5, value=issue.abnormal_work_time or 0)
         ws.cell(row=row_idx, column=6, value=issue.desc or '')
-        ws.cell(row=row_idx, column=7, value=issue.root_cause or '')
-        ws.cell(row=row_idx, column=8, value=issue.category.name if issue.category else '')
-        ws.cell(row=row_idx, column=9, value=issue.get_severity_display())
-        ws.cell(row=row_idx, column=10, value=issue.supervisor or '')
-        ws.cell(row=row_idx, column=11, value=issue.issue_code or '')
-        ws.cell(row=row_idx, column=12, value=issue.risk_id or '')
+        ws.cell(row=row_idx, column=7, value=issue.spare_field_1 or '')   # 原因 5 Why
+        ws.cell(row=row_idx, column=8, value=issue.root_cause or '')      # 改善方式
+        ws.cell(row=row_idx, column=9, value=issue.category.name if issue.category else '')
+        ws.cell(row=row_idx, column=10, value=issue.get_severity_display())
+        ws.cell(row=row_idx, column=11, value=issue.supervisor or '')
+        ws.cell(row=row_idx, column=12, value=issue.issue_code or '')
+        ws.cell(row=row_idx, column=13, value=issue.risk_id or '')
 
-    for i, width in enumerate([12, 12, 14, 10, 12, 40, 30, 16, 8, 22, 14, 18], start=1):
+    # 列宽（13 列）
+    for i, width in enumerate([12, 12, 14, 10, 12, 28, 40, 28, 16, 8, 22, 14, 18], start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    # 文件名用英文，避免浏览器乱码/识别失败
     response['Content-Disposition'] = 'attachment; filename="equipment_issues.xlsx"'
     wb.save(response)
     return response

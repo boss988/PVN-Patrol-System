@@ -8,7 +8,6 @@
     <form method="post">
         {% csrf_token %}
 
-        <!-- 基本信息 -->
         <div class="card mb-3 shadow-sm">
             <div class="card-header fw-bold">基本信息Thông tin cơ bản</div>
             <div class="card-body">
@@ -41,11 +40,15 @@
                         <label class="form-label">设备类型Loại thiết bị</label>
                         <input type="text" name="eq_type" class="form-control" placeholder="如：自动锁螺丝机">
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">设备类别Loại đồ gá / thiết bị</label>
+                        <input type="text" name="category" class="form-control" placeholder="如：設備、治具">
+                        <div class="form-text">资产分类，与下面的「产线类型」无关</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 位置：机种 → 类别 → 线别 → 站别 -->
         <div class="card mb-3 shadow-sm">
             <div class="card-header fw-bold">设备位置Vị trí thiết bị</div>
             <div class="card-body">
@@ -60,15 +63,16 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">类别Loại (Auto/manual)</label>
-                        <select name="category" id="categorySelect" class="form-select">
+                        <label class="form-label">产线类型Kiểu dây chuyền</label>
+                        <select name="line_category" id="lineCategorySelect" class="form-select">
                             <option value="">-- 先选机种 --</option>
                         </select>
+                        <div class="form-text">仅用于选线（Auto/Manual），不存为设备类别</div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">线别Tuyến</label>
                         <select name="line" id="lineSelect" class="form-select">
-                            <option value="">-- 先选类别 --</option>
+                            <option value="">-- 先选产线类型 --</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -80,7 +84,6 @@
                         <input type="text" name="area" class="form-control">
                     </div>
                 </div>
-                <div class="form-text mt-2">顺序：机种 → 类别 → 线别（配置表）→ 站别（手填）</div>
             </div>
         </div>
 
@@ -94,7 +97,7 @@
 <script>
 const CONFIGS = {{ configs_json|safe }};
 const modelTypeEl = document.getElementById('modelType');
-const categoryEl = document.getElementById('categorySelect');
+const lineCategoryEl = document.getElementById('lineCategorySelect');
 const lineEl = document.getElementById('lineSelect');
 
 function resetSelect(el, text) {
@@ -103,8 +106,8 @@ function resetSelect(el, text) {
 
 modelTypeEl.addEventListener('change', function () {
     const mt = this.value;
-    resetSelect(categoryEl, '-- 请选择类别 --');
-    resetSelect(lineEl, '-- 先选类别 --');
+    resetSelect(lineCategoryEl, '-- 请选择产线类型 --');
+    resetSelect(lineEl, '-- 先选产线类型 --');
     if (!mt) return;
     const cats = [];
     CONFIGS.forEach(function (c) {
@@ -116,11 +119,11 @@ modelTypeEl.addEventListener('change', function () {
         const opt = document.createElement('option');
         opt.value = cat;
         opt.textContent = cat;
-        categoryEl.appendChild(opt);
+        lineCategoryEl.appendChild(opt);
     });
 });
 
-categoryEl.addEventListener('change', function () {
+lineCategoryEl.addEventListener('change', function () {
     const mt = modelTypeEl.value;
     const cat = this.value;
     resetSelect(lineEl, '-- 请选择线体 --');

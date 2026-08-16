@@ -14,12 +14,12 @@
         <a href="{% url 'issues:global_issues_list' %}" class="btn btn-outline-primary">📋 异常记录列表</a>
     </div>
 
-    <!-- 卡片总览（便于对比） -->
+    <!-- 卡片总览 -->
     <div class="row g-3 mb-4">
         {% for card in cards %}
         <div class="col-md-4">
             <div class="card shadow-sm h-100 border-0"
-                 style="border-left:5px solid {% if card.model_type == 'BNC' %}#0d6efd{% elif card.model_type == 'PRO' %}#198754{% else %}#fd7e14{% endif %} !important;">
+                 style="border-left:5px solid {% if 'PRO' in card.model_type or 'Pro' in card.model_type %}#198754{% elif 'Arias' in card.model_type or 'ARIAS' in card.model_type %}#fd7e14{% else %}#0d6efd{% endif %} !important;">
                 <div class="card-body py-3">
                     <h4 class="fw-bold mb-2">{{ card.model_type }}</h4>
                     <div class="d-flex justify-content-between">
@@ -37,23 +37,25 @@
                 </div>
             </div>
         </div>
+        {% empty %}
+        <div class="col-12 text-muted">暂无机种数据，请先在后台「产线层级配置」添加机种/线体。</div>
         {% endfor %}
     </div>
 
-    <!-- 三个机种折线图 -->
+    <!-- 各机种折线图 -->
     {% for chart in charts %}
     <div class="card shadow-sm mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <div class="card-header d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
             <span class="fw-bold">{{ chart.model_type }} · 异常时间趋势Xu hướng</span>
             <div class="btn-group btn-group-sm">
-                <a href="?mode_BNC={% if chart.model_type == 'BNC' %}day{% else %}{{ charts.0.mode }}{% endif %}&mode_PRO={% if chart.model_type == 'PRO' %}day{% else %}{{ charts.1.mode }}{% endif %}&mode_Arias={% if chart.model_type == 'Arias' %}day{% else %}{{ charts.2.mode }}{% endif %}"
-                   class="btn btn-outline-primary {% if chart.mode == 'day' %}active{% endif %}">按天14天</a>
-                <a href="?mode_BNC={% if chart.model_type == 'BNC' %}week{% else %}{{ charts.0.mode }}{% endif %}&mode_PRO={% if chart.model_type == 'PRO' %}week{% else %}{{ charts.1.mode }}{% endif %}&mode_Arias={% if chart.model_type == 'Arias' %}week{% else %}{{ charts.2.mode }}{% endif %}"
-                   class="btn btn-outline-primary {% if chart.mode == 'week' %}active{% endif %}">按周8周</a>
+                <a href="?{% for c in charts %}mode_{{ c.model_type }}={% if c.model_type == chart.model_type %}day{% else %}{{ c.mode }}{% endif %}{% if not forloop.last %}&{% endif %}{% endfor %}"
+                   class="btn btn-outline-primary {% if chart.mode == 'day' %}active{% endif %}">按天14天Theo ngày</a>
+                <a href="?{% for c in charts %}mode_{{ c.model_type }}={% if c.model_type == chart.model_type %}week{% else %}{{ c.mode }}{% endif %}{% if not forloop.last %}&{% endif %}{% endfor %}"
+                   class="btn btn-outline-primary {% if chart.mode == 'week' %}active{% endif %}">按周8周Theo tuần</a>
             </div>
         </div>
         <div class="card-body">
-            <canvas id="chart_{{ chart.model_type }}" height="90"></canvas>
+            <canvas id="chart_{{ forloop.counter }}" height="90"></canvas>
             <div class="text-muted small mt-1">点击图上的点 → 查看该天/该周线体明细</div>
         </div>
     </div>
@@ -66,8 +68,8 @@
     var charts = [
         {% for chart in charts %}
         {
-            id: "chart_{{ chart.model_type }}",
-            model: "{{ chart.model_type }}",
+            id: "chart_{{ forloop.counter }}",
+            model: "{{ chart.model_type|escapejs }}",
             mode: "{{ chart.mode }}",
             labels: {{ chart.labels|safe }},
             values: {{ chart.values|safe }},
@@ -75,6 +77,13 @@
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
+
+    function lineColor(name) {
+        var n = (name || '').toUpperCase();
+        if (n.indexOf('PRO') >= 0) return '#198754';
+        if (n.indexOf('ARIAS') >= 0) return '#fd7e14';
+        return '#0d6efd';
+    }
 
     charts.forEach(function (c) {
         var el = document.getElementById(c.id);
@@ -86,7 +95,7 @@
                 datasets: [{
                     label: c.model + ' 异常时间(min)',
                     data: c.values,
-                    borderColor: c.model === 'BNC' ? '#0d6efd' : (c.model === 'PRO' ? '#198754' : '#fd7e14'),
+                    borderColor: lineColor(c.model),
                     backgroundColor: 'rgba(0,0,0,0.05)',
                     fill: true,
                     tension: 0.25,
@@ -100,7 +109,7 @@
                     if (!elements.length) return;
                     var idx = elements[0].index;
                     var point = c.pointKeys[idx];
-                    window.location.href = '/issues/analytics/' + c.model + '/' + c.mode + '/' + point + '/';
+                    window.location.href = '/issues/analytics/' + encodeURIComponent(c.model) + '/' + c.mode + '/' + point + '/';
                 },
                 plugins: {
                     tooltip: {

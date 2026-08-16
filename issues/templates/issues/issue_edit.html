@@ -2,33 +2,36 @@
 {% block title %}编辑异常Sửa bất thường - {{ issue.issue_code }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4" style="max-width: 900px;">
+<div class="container mt-4" style="max-width: 960px;">
     <h3 class="mb-3">✏️ 编辑设备异常Sửa bất thường thiết bị</h3>
-    <p class="text-muted">问题码：{{ issue.issue_code }}　|　设备：{{ issue.equipment.code }} - {{ issue.equipment.name }}</p>
+    <p class="text-muted mb-3">
+        问题码Mã：{{ issue.issue_code }}　|　
+        设备Thiết bị：{{ issue.equipment.code }} - {{ issue.equipment.name }}
+    </p>
 
     <form method="post">
         {% csrf_token %}
 
-        <div class="card mb-3">
-            <div class="card-header fw-bold">基本信息</div>
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header fw-bold">基本信息Thông tin cơ bản</div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">发生日期Ngày</label>
+                        <label class="form-label">发生日期Ngày xảy ra</label>
                         <input type="date" name="occur_date" class="form-control"
                                value="{{ issue.occur_date|date:'Y-m-d' }}">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">异常工时(分钟)</label>
+                        <label class="form-label">异常工时(分钟)Thời gian (phút)</label>
                         <input type="number" name="abnormal_work_time" class="form-control" min="0"
                                value="{{ issue.abnormal_work_time }}">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">严重度</label>
+                        <label class="form-label">严重度Mức độ nghiêm trọng</label>
                         <select name="severity" class="form-select">
-                            <option value="1" {% if issue.severity == 1 %}selected{% endif %}>低</option>
-                            <option value="2" {% if issue.severity == 2 %}selected{% endif %}>中</option>
-                            <option value="3" {% if issue.severity == 3 %}selected{% endif %}>高</option>
+                            <option value="1" {% if issue.severity == 1 %}selected{% endif %}>低Thấp</option>
+                            <option value="2" {% if issue.severity == 2 %}selected{% endif %}>中Trung bình</option>
+                            <option value="3" {% if issue.severity == 3 %}selected{% endif %}>高Cao</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -49,27 +52,42 @@
                             {% endfor %}
                         </select>
                     </div>
+
                     <div class="col-12">
-                        <label class="form-label">异常现象及原因</label>
-                        <textarea name="desc" class="form-control" rows="3" required>{{ issue.desc }}</textarea>
+                        <label class="form-label">异常现象Hiện tượng <span class="text-danger">*</span></label>
+                        <input type="text" name="desc" class="form-control" required maxlength="200"
+                               value="{{ issue.desc }}"
+                               placeholder="客观事实，简短即可">
+                        <div class="form-text">只写事实，不要在这里写分析。</div>
                     </div>
+
                     <div class="col-12">
-                        <label class="form-label">改善 / 处理方法</label>
-                        <textarea name="root_cause" class="form-control" rows="2">{{ issue.root_cause }}</textarea>
+                        <label class="form-label">异常原因（5个为什么）Nguyên nhân (5 Why)</label>
+                        <textarea name="spare_field_1" class="form-control" rows="5"
+                                  placeholder="连续问为什么，追到真因">{{ issue.spare_field_1 }}</textarea>
+                        <div class="form-text text-muted">
+                            提示：1为什么→2为什么→…→可对策的真因。时间/线体/站别已在记录中，这里只写原因分析。
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>
+                        <textarea name="root_cause" class="form-control" rows="2"
+                                  placeholder="已采取或计划采取的措施">{{ issue.root_cause }}</textarea>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card mb-3">
-            <div class="card-header fw-bold">导入相关（可选）</div>
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header fw-bold">导入相关（可选）Liên kết mô-đun</div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="can_import_maintenance" id="m1"
                                    {% if issue.can_import_maintenance %}checked{% endif %}>
-                            <label class="form-check-label" for="m1">可导入保养</label>
+                            <label class="form-check-label" for="m1">可导入保养Có thể đưa vào bảo dưỡng</label>
                         </div>
                         <input type="text" name="maintenance_id" class="form-control" placeholder="保养ID"
                                value="{{ issue.maintenance_id }}">
@@ -78,7 +96,7 @@
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="can_import_design" id="d1"
                                    {% if issue.can_import_design %}checked{% endif %}>
-                            <label class="form-check-label" for="d1">可导入设计</label>
+                            <label class="form-check-label" for="d1">可导入设计Có thể đưa vào thiết kế</label>
                         </div>
                         <input type="text" name="design_id" class="form-control" placeholder="设计ID"
                                value="{{ issue.design_id }}">
@@ -87,7 +105,7 @@
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="can_import_training" id="t1"
                                    {% if issue.can_import_training %}checked{% endif %}>
-                            <label class="form-check-label" for="t1">可导入培训</label>
+                            <label class="form-check-label" for="t1">可导入培训Có thể đưa vào đào tạo</label>
                         </div>
                         <input type="text" name="training_id" class="form-control" placeholder="培训ID"
                                value="{{ issue.training_id }}">
@@ -96,7 +114,7 @@
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="can_import_repair" id="r1"
                                    {% if issue.can_import_repair %}checked{% endif %}>
-                            <label class="form-check-label" for="r1">可导入维修</label>
+                            <label class="form-check-label" for="r1">可导入维修Có thể đưa vào sửa chữa</label>
                         </div>
                         <input type="text" name="repair_id" class="form-control" placeholder="维修ID"
                                value="{{ issue.repair_id }}">
@@ -107,7 +125,7 @@
 
         <div class="d-flex gap-2 mb-5">
             <button type="submit" class="btn btn-primary btn-lg">✅ 保存Lưu</button>
-            <a href="{% url 'issues:issue_detail' issue.pk %}" class="btn btn-secondary btn-lg">取消</a>
+            <a href="{% url 'issues:issue_detail' issue.pk %}" class="btn btn-secondary btn-lg">取消Hủy</a>
         </div>
     </form>
 </div>

@@ -90,10 +90,28 @@
                         </select>
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label">异常现象及原因Hiện tượng & nguyên nhân <span class="text-danger">*</span></label>
-                        <textarea name="desc" class="form-control" rows="3" required
-                                  placeholder="简要描述异常现象和原因"></textarea>
+            <div class="mb-3">
+                <label class="form-label">异常现象Hiện tượng <span class="text-danger">*</span></label>
+                <input type="text" name="desc" class="form-control"
+                       placeholder="客观事实，简短即可。例：焊接报废25pcs / 跳电停机10分钟"
+                       required maxlength="200">
+                <div class="form-text">只写看到的事实，不要在这里写分析。</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">异常原因（5个为什么）Nguyên nhân (5 Why) <span class="text-danger">*</span></label>
+                <textarea name="spare_field_1" class="form-control" rows="5" required
+                          placeholder="用「为什么」追问到真因，例如：&#10;1.为什么报废？→ 焊点虚焊&#10;2.为什么虚焊？→ 温度不稳&#10;3.为什么温度不稳？→ 温控器老化&#10;4.为什么没发现？→ 未点检温控&#10;5.为什么未点检？→ SOP未包含该项"></textarea>
+                <div class="form-text text-muted">
+                    提示：连续问「为什么」，尽量问到可采取对策的那一层（真因）。时间/线体/站别已在上方记录，这里专注原因分析。
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>
+                <textarea name="root_cause" class="form-control" rows="2"
+                          placeholder="已采取或计划采取的措施"></textarea>
+            </div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>

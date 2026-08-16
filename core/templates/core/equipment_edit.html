@@ -8,7 +8,6 @@
     <form method="post">
         {% csrf_token %}
 
-        <!-- 基本信息 -->
         <div class="card mb-3 shadow-sm">
             <div class="card-header fw-bold">基本信息Thông tin cơ bản</div>
             <div class="card-body">
@@ -27,13 +26,16 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">设备类型Loại thiết bị</label>
-                        <input type="text" name="eq_type" class="form-control" value="{{ equipment.eq_type|default:'' }}" placeholder="如：自动锁螺丝机">
+                        <input type="text" name="eq_type" class="form-control" value="{{ equipment.eq_type|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">设备类别Loại đồ gá / thiết bị</label>
+                        <input type="text" name="category" class="form-control" value="{{ equipment.category|default:'' }}" placeholder="如：設備、治具">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 位置：机种 → 类别 → 线别 → 站别 -->
         <div class="card mb-3 shadow-sm">
             <div class="card-header fw-bold">设备位置Vị trí thiết bị</div>
             <div class="card-body">
@@ -48,20 +50,21 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">类别Loại</label>
-                        <select name="category" id="categorySelect" class="form-select">
+                        <label class="form-label">产线类型Kiểu dây chuyền</label>
+                        <select name="line_category" id="lineCategorySelect" class="form-select">
                             <option value="">-- 先选机种 --</option>
                         </select>
+                        <div class="form-text">仅联动选线，不覆盖设备类别</div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">线别Tuyến</label>
                         <select name="line" id="lineSelect" class="form-select">
-                            <option value="">-- 先选类别 --</option>
+                            <option value="">-- 先选产线类型 --</option>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">站别Trạm</label>
-                        <input type="text" name="station" class="form-control" value="{{ equipment.station|default:'' }}" placeholder="如：D52">
+                        <input type="text" name="station" class="form-control" value="{{ equipment.station|default:'' }}">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">区域Khu vực</label>
@@ -80,20 +83,19 @@
 
 <script>
 const CONFIGS = {{ configs_json|safe }};
-const CURRENT_CATEGORY = "{{ equipment.category|default:''|escapejs }}";
 const CURRENT_LINE = "{{ equipment.line|default:''|escapejs }}";
 
 const modelTypeEl = document.getElementById('modelType');
-const categoryEl = document.getElementById('categorySelect');
+const lineCategoryEl = document.getElementById('lineCategorySelect');
 const lineEl = document.getElementById('lineSelect');
 
 function resetSelect(el, text) {
     el.innerHTML = '<option value="">' + text + '</option>';
 }
 
-function fillCategories(mt, selectedCat) {
-    resetSelect(categoryEl, '-- 请选择类别 --');
-    resetSelect(lineEl, '-- 先选类别 --');
+function fillLineCategories(mt, preferCat) {
+    resetSelect(lineCategoryEl, '-- 请选择产线类型 --');
+    resetSelect(lineEl, '-- 先选产线类型 --');
     if (!mt) return;
     const cats = [];
     CONFIGS.forEach(function (c) {
@@ -105,9 +107,19 @@ function fillCategories(mt, selectedCat) {
         const opt = document.createElement('option');
         opt.value = cat;
         opt.textContent = cat;
-        if (selectedCat && cat === selectedCat) opt.selected = true;
-        categoryEl.appendChild(opt);
+        lineCategoryEl.appendChild(opt);
     });
+    // 根据当前线体反推产线类型
+    if (CURRENT_LINE) {
+        for (let i = 0; i < CONFIGS.length; i++) {
+            const c = CONFIGS[i];
+            if (c.model_type === mt && c.line === CURRENT_LINE) {
+                lineCategoryEl.value = c.category;
+                fillLines(mt, c.category, CURRENT_LINE);
+                break;
+            }
+        }
+    }
 }
 
 function fillLines(mt, cat, selectedLine) {
@@ -125,22 +137,15 @@ function fillLines(mt, cat, selectedLine) {
 }
 
 modelTypeEl.addEventListener('change', function () {
-    fillCategories(this.value, '');
+    fillLineCategories(this.value);
 });
 
-categoryEl.addEventListener('change', function () {
+lineCategoryEl.addEventListener('change', function () {
     fillLines(modelTypeEl.value, this.value, '');
 });
 
-// 打开编辑页时回填类别、线别
 (function () {
-    const mt = modelTypeEl.value;
-    if (mt) {
-        fillCategories(mt, CURRENT_CATEGORY);
-        if (CURRENT_CATEGORY) {
-            fillLines(mt, CURRENT_CATEGORY, CURRENT_LINE);
-        }
-    }
+    if (modelTypeEl.value) fillLineCategories(modelTypeEl.value);
 })();
 </script>
 {% endblock %}
