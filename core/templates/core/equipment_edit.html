@@ -2,10 +2,10 @@
 {% block title %}编辑设备 - {{ equipment.name }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-3 mt-3" style="max-width: 960px;">
+<div class="container-fluid px-3 mt-3" style="max-width: 1000px;">
     <h3 class="mb-3">✏️ 编辑设备Chỉnh sửa thiết bị</h3>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
         <div class="card mb-3 shadow-sm">
@@ -14,7 +14,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">设备编号Mã thiết bị</label>
-                        <input type="text" name="code" class="form-control" value="{{ equipment.code }}" readonly>
+                        <input type="text" class="form-control" value="{{ equipment.code }}" readonly>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">设备名称Tên thiết bị <span class="text-danger">*</span></label>
@@ -25,12 +25,39 @@
                         <input type="text" name="rfid_card" class="form-control" value="{{ equipment.rfid_card|default:'' }}">
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label">状态Trạng thái</label>
+                        <select name="status" class="form-select">
+                            <option value="active" {% if equipment.status == 'active' %}selected{% endif %}>活跃Hoạt động</option>
+                            <option value="inactive" {% if equipment.status == 'inactive' %}selected{% endif %}>停用Ngừng</option>
+                            <option value="maintenance" {% if equipment.status == 'maintenance' %}selected{% endif %}>保养中Bảo dưỡng</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">安装日期Ngày lắp đặt</label>
+                        <input type="date" name="install_date" class="form-control"
+                               value="{{ equipment.install_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">型号Model</label>
+                        <input type="text" name="model" class="form-control" value="{{ equipment.model|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">设备类型Loại thiết bị</label>
-                        <input type="text" name="eq_type" class="form-control" value="{{ equipment.eq_type|default:'' }}">
+                        <input type="text" name="eq_type" class="form-control" value="{{ equipment.eq_type|default:'' }}"
+                               placeholder="如：自动锁螺丝机">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">设备类别Loại đồ gá / thiết bị</label>
-                        <input type="text" name="category" class="form-control" value="{{ equipment.category|default:'' }}" placeholder="如：設備、治具">
+                        <input type="text" name="category" class="form-control" value="{{ equipment.category|default:'' }}"
+                               placeholder="如：設備、治具">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">位置说明Vị trí mô tả</label>
+                        <input type="text" name="location" class="form-control" value="{{ equipment.location|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">产线排序Position</label>
+                        <input type="number" name="position" class="form-control" value="{{ equipment.position|default:0 }}">
                     </div>
                 </div>
             </div>
@@ -74,9 +101,35 @@
             </div>
         </div>
 
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-warning">✅ 保存修改Lưu</button>
-            <a href="{% url 'core:equipment_list' %}" class="btn btn-outline-secondary">返回列表</a>
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header fw-bold">设备照片Ảnh thiết bị</div>
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        {% if equipment.photo %}
+                        <img src="{{ equipment.photo.url }}" alt=""
+                             style="max-height:140px;max-width:100%;border-radius:8px;border:1px solid #ddd;">
+                        {% elif equipment.design_info.image %}
+                        <img src="{{ equipment.design_info.image.url }}" alt="设计图"
+                             style="max-height:140px;max-width:100%;border-radius:8px;border:1px solid #ddd;">
+                        <div class="form-text">当前为设计模块照片</div>
+                        {% else %}
+                        <span class="text-muted">暂无照片</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">上传/更换照片Tải ảnh lên</label>
+                        <input type="file" name="photo" class="form-control" accept="image/*">
+                        <div class="form-text">上传后总表缩略图会显示此图</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-warning btn-lg">✅ 保存修改Lưu</button>
+            <a href="{% url 'core:equipment_list' %}" class="btn btn-outline-secondary btn-lg">返回列表</a>
+            <a href="{% url 'core:equipment_detail' equipment.pk %}" class="btn btn-outline-info btn-lg">详情</a>
         </div>
     </form>
 </div>
@@ -93,7 +146,7 @@ function resetSelect(el, text) {
     el.innerHTML = '<option value="">' + text + '</option>';
 }
 
-function fillLineCategories(mt, preferCat) {
+function fillLineCategories(mt) {
     resetSelect(lineCategoryEl, '-- 请选择产线类型 --');
     resetSelect(lineEl, '-- 先选产线类型 --');
     if (!mt) return;
@@ -109,7 +162,6 @@ function fillLineCategories(mt, preferCat) {
         opt.textContent = cat;
         lineCategoryEl.appendChild(opt);
     });
-    // 根据当前线体反推产线类型
     if (CURRENT_LINE) {
         for (let i = 0; i < CONFIGS.length; i++) {
             const c = CONFIGS[i];
@@ -139,11 +191,9 @@ function fillLines(mt, cat, selectedLine) {
 modelTypeEl.addEventListener('change', function () {
     fillLineCategories(this.value);
 });
-
 lineCategoryEl.addEventListener('change', function () {
     fillLines(modelTypeEl.value, this.value, '');
 });
-
 (function () {
     if (modelTypeEl.value) fillLineCategories(modelTypeEl.value);
 })();

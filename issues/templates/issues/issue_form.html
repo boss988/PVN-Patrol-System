@@ -12,6 +12,12 @@
                 <div class="card mb-3">
             <div class="card-header fw-bold">设备位置Vị trí thiết bị</div>
             <div class="card-body">
+                {% if prefill.equipment_id %}
+                <div class="alert alert-info py-2 mb-3">
+                    已从设备带入：<strong>{{ prefill.code }}</strong> - {{ prefill.name }}
+                    （机种 {{ prefill.model_type }} / 线 {{ prefill.line }} / 站 {{ prefill.station }}）
+                </div>
+                {% endif %}
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">机种Loại máy <span class="text-danger">*</span></label>
@@ -101,7 +107,7 @@
             <div class="mb-3">
                 <label class="form-label">异常原因（5个为什么）Nguyên nhân (5 Why) <span class="text-danger">*</span></label>
                 <textarea name="spare_field_1" class="form-control" rows="5" required
-                          placeholder="用「为什么」追问到真因，例如：&#10;1.为什么报废？→ 焊点虚焊&#10;2.为什么虚焊？→ 温度不稳&#10;3.为什么温度不稳？→ 温控器老化&#10;4.为什么没发现？→ 未点检温控&#10;5.为什么未点检？→ SOP未包含该项"></textarea>
+                          placeholder="用「为什么」追问到真因，例如：&#10;1.为什么报废？→ 焊点虚焊&#10;2.为什么虚焊？→ 温度不稳&#10;3.为什么温度不稳？→ 温控器老化&#10;4.为什么没发现？→ 未点检温控&#10;5.为什么未点检？→ 开线时没看"></textarea>
                 <div class="form-text text-muted">
                     提示：连续问「为什么」，尽量问到可采取对策的那一层（真因）。时间/线体/站别已在上方记录，这里专注原因分析。
                 </div>
@@ -254,5 +260,69 @@ stationEl.addEventListener('change', function () {
         hintEl.className = 'text-danger';
     }
 });
+// ========== 从设备详情进入：自动选中机种/线/站 ==========
+(function () {
+    var prefill = {{ prefill_json|default:"{}"|safe }};
+    if (!prefill || !prefill.equipment_id) return;
+
+    function pickStation() {
+        if (prefill.station && stationEl) {
+            stationEl.value = prefill.station;
+            stationEl.dispatchEvent(new Event('change'));
+        }
+        if (equipmentIdEl) {
+            equipmentIdEl.value = prefill.equipment_id;
+        }
+        if (hintEl) {
+            hintEl.textContent = '已锁定设备：' + (prefill.code || '') + ' - ' + (prefill.name || '');
+            hintEl.className = 'text-success';
+        }
+    }
+
+    function pickLine() {
+        if (prefill.line && lineEl) {
+            lineEl.value = prefill.line;
+            lineEl.dispatchEvent(new Event('change'));
+        }
+        setTimeout(pickStation, 30);
+    }
+
+    function pickCategory() {
+        var cat = '';
+        for (var i = 0; i < CONFIGS.length; i++) {
+            var c = CONFIGS[i];
+            if (c.line === prefill.line &&
+                (c.model_type === prefill.model_type ||
+                 (prefill.model_type && c.model_type &&
+                  prefill.model_type.toUpperCase().indexOf(c.model_type.toUpperCase()) >= 0))) {
+                cat = c.category;
+                break;
+            }
+        }
+        // 线体能匹配但机种对不上时，仍用该线的类别
+        if (!cat && prefill.line) {
+            for (var j = 0; j < CONFIGS.length; j++) {
+                if (CONFIGS[j].line === prefill.line) {
+                    cat = CONFIGS[j].category;
+                    if (CONFIGS[j].model_type && modelTypeEl) {
+                        modelTypeEl.value = CONFIGS[j].model_type;
+                    }
+                    break;
+                }
+            }
+        }
+        if (cat && lineCategoryEl) {
+            lineCategoryEl.value = cat;
+            lineCategoryEl.dispatchEvent(new Event('change'));
+        }
+        setTimeout(pickLine, 30);
+    }
+
+    if (prefill.model_type && modelTypeEl) {
+        modelTypeEl.value = prefill.model_type;
+        modelTypeEl.dispatchEvent(new Event('change'));
+    }
+    setTimeout(pickCategory, 30);
+})();
 </script>
 {% endblock %}

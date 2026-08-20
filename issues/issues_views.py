@@ -480,16 +480,25 @@ def issue_create(request, equipment_pk=None):
             messages.error(request, '请填写异常原因（5个为什么）！')
             return redirect(request.path)
 
-        if not model_type or not ProductionLineConfig.objects.filter(
-                is_active=True, model_type=model_type
-        ).exists():
-            messages.error(request, '机种不在配置表中，请联系管理员在后台添加！')
-            return redirect(request.path)
+        # 已锁定具体设备时，不再强制机种必须在配置表
+        if not equipment_id:
+            if not model_type or not ProductionLineConfig.objects.filter(
+                    is_active=True, model_type=model_type
+            ).exists():
+                messages.error(request, '机种不在配置表中，请联系管理员在后台添加！')
+                return redirect(request.path)
 
-        # 校验线体是否在配置表中
-        cfg_ok = ProductionLineConfig.objects.filter(
-            is_active=True, model_type=model_type, line=line
-        ).exists()
+            cfg_ok = ProductionLineConfig.objects.filter(
+                is_active=True, model_type=model_type, line=line
+            ).exists()
+            if not line or not cfg_ok:
+                messages.error(request, '请选择配置表中的有效线体！')
+                return redirect(request.path)
+
+        # # 校验线体是否在配置表中
+        # cfg_ok = ProductionLineConfig.objects.filter(
+        #     is_active=True, model_type=model_type, line=line
+        # ).exists()
         if not line or not cfg_ok:
             messages.error(request, '请选择配置表中的有效线体！')
             return redirect(request.path)
@@ -551,7 +560,26 @@ def issue_create(request, equipment_pk=None):
                 break
 
         messages.success(request, f'✅ 已新增设备异常：{issue_code}')
+        if equipment_pk:
+            return redirect('issues:issues_list', equipment_pk=equipment_pk)
         return redirect('issues:global_issues_list')
+
+    # ---------- 从设备详情进来：预填位置 ----------
+    prefill = {}
+    if equipment_pk:
+        eq = Equipment.objects.filter(pk=equipment_pk).first()
+        if eq:
+            prefill = {
+                'equipment_id': eq.id,
+                'model_type': (eq.model_type or '').strip(),
+                'line': (eq.line or '').strip(),
+                'station': (eq.station or '').strip(),
+                'code': eq.code or '',
+                'name': eq.name or '',
+            }
+            # 若设备机种不在配置表下拉里，临时加入，避免选不中
+            if prefill['model_type'] and prefill['model_type'] not in model_types:
+                model_types.insert(0, prefill['model_type'])
 
     import json
     context = {
@@ -562,6 +590,8 @@ def issue_create(request, equipment_pk=None):
         'categories': categories,
         'supervisor_choices': SUPERVISOR_CHOICES,
         'today': timezone.now().date().isoformat(),
+        'prefill': prefill,
+        'prefill_json': json.dumps(prefill, ensure_ascii=False),
     }
     return render(request, 'issues/issue_form.html', context)
 
@@ -1196,7 +1226,7 @@ def equipment_analytics_stations(request, model, mode, point, line):
     point = (point or '').strip()
     line = (line or '').strip()
 
-    if model not in MODEL_TYPES_ANALYTICS or mode not in ('day', 'week'):
+    if model not in get_analytics_model_types() or mode not in ('day', 'week'):
         messages.error(request, '参数错误')
         return redirect('issues:equipment_analytics')
 

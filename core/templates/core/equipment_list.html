@@ -8,16 +8,14 @@
     <h2 class="mb-4">🚀 {% trans "设备总表Bảng tổng thiết bị" %} ({{ paginator.count }} {% trans "台" %})</h2>
 
     <div class="row">
-        <!-- 左侧 Sidebar（每个厂别只显示自己的线别） -->
+        <!-- 左侧 Sidebar -->
         <div class="col-md-2 col-lg-1.2">
             <div class="list-group list-group-flush shadow-sm bg-white rounded-3">
-                <!-- 全部设备 -->
                 <a href="{% url 'core:equipment_list' %}"
                    class="list-group-item list-group-item-action {% if not selected_area and not selected_line %}active{% endif %}">
                     📋 {% trans "全部设备Tất cả thiết bị" %} ({{ paginator.count }} {% trans "台" %})
                 </a>
 
-                <!-- 厂别 + 线别（嵌套正确） -->
                 {% for item in area_line_list %}
                 <div class="accordion accordion-flush" id="accordionArea">
                     <div class="accordion-item">
@@ -54,7 +52,6 @@
         <!-- 右侧主内容 -->
         <div class="col-md-9 col-lg-10">
 
-            <!-- 全局搜索栏 -->
             <form method="get" class="mb-4">
                 <div class="row g-3">
                     <div class="col-md-2"><label>{% trans "ID / RFID" %}</label>{{ form.id_search }}</div>
@@ -69,7 +66,6 @@
                 </div>
             </form>
 
-            <!-- 两个按钮 -->
             <div class="mb-3">
                 <a href="{% url 'core:equipment_create' %}" class="btn btn-primary me-2">
                     ➕ {% trans "新建设备Thêm mới thiết bị" %}
@@ -79,48 +75,63 @@
                 </a>
             </div>
 
-            <!-- 表格 -->
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle">
                     <thead class="table-dark">
                     <tr>
                         <th>{% trans "编号Số hiệu" %}</th>
                         <th>{% trans "名称Tên" %}</th>
+                        <th>{% trans "机种Loại máy" %}</th>
+                        <th>{% trans "类别Loại" %}</th>
                         <th>{% trans "站别Trạm" %}</th>
                         <th>{% trans "线别Dây chuyền" %}</th>
-                        <th>{% trans "RFID卡号Số thẻ RFID" %}</th>
                         <th>{% trans "区域Khu vực" %}</th>
-                        <th>{% trans "设备类别Loại đồ gá" %}</th>
-                        <th>{% trans "设备类型Loại thiết bị" %}</th>
                         <th>{% trans "状态Trạng thái" %}</th>
+                        <th>{% trans "图片Ảnh" %}</th>
                         <th>{% trans "健康度Độ khỏe" %}</th>
-                        <th>{% trans "操作Thao tác" %}</th>
+                        <th style="width:100px;">{% trans "操作Thao tác" %}</th>
                     </tr>
                     </thead>
                     <tbody>
                     {% for eq in equipments %}
                     <tr>
-                        <td><strong>{{ eq.code }}</strong></td>
-                        <td>{{ eq.name }}</td>
+                        <td><strong class="small">{{ eq.code }}</strong></td>
+                        <td class="text-start small">{{ eq.name }}</td>
+                        <td class="small">{{ eq.model_type|default:"-" }}</td>
+                        <td class="small">{{ eq.category|default:"-" }}</td>
                         <td>{{ eq.station|default:"-" }}</td>
                         <td>{{ eq.line|default:"-" }}</td>
-                        <td>{{ eq.rfid_card|default:"-" }}</td>
                         <td>{{ eq.area|default:"-" }}</td>
-                        <td>{{ eq.category|default:"-" }}</td>
-                        <td>{{ eq.eq_type|default:"-" }}</td>
-                        <td>{{ eq.get_status_display }}</td>
+                        <td class="small">{{ eq.get_status_display }}</td>
                         <td>
-                            <span class="badge {% if eq.health_score >= 80 %}bg-success{% elif eq.health_score >= 60 %}bg-warning{% else %}bg-danger{% endif %} fs-5">
+                            {% if eq.photo %}
+                            <a href="{{ eq.photo.url }}" target="_blank">
+                                <img src="{{ eq.photo.url }}" alt=""
+                                     style="height:72px;width:72px;object-fit:cover;border-radius:6px;">
+                            </a>
+                            {% elif eq.design_info.image %}
+                            <a href="{{ eq.design_info.image.url }}" target="_blank">
+                                <img src="{{ eq.design_info.image.url }}" alt=""
+                                     style="height:72px;width:72px;object-fit:cover;border-radius:6px;">
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if eq.health_score >= 80 %}bg-success{% elif eq.health_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
                                 {{ eq.health_score }} {% trans "分" %}
                             </span>
                         </td>
                         <td>
-                            <a href="{% url 'core:equipment_detail' eq.pk %}" class="btn btn-info btn-sm">{% trans "详情Chi tiết" %}</a>
-                            <a href="{% url 'core:equipment_edit' eq.pk %}" class="btn btn-warning btn-sm">{% trans "修改Sửa" %}</a>
-                            <a href="{% url 'core:equipment_delete' eq.pk %}" class="btn btn-danger btn-sm"
-                               onclick="return confirm('{% trans "确定删除" %} {{ eq.name }} {% trans "吗？" %}')">
-                                {% trans "删除" %}
-                            </a>
+                            <div class="d-flex flex-column gap-1 align-items-stretch" style="min-width:90px;">
+                                <a href="{% url 'core:equipment_detail' eq.pk %}" class="btn btn-info btn-sm">{% trans "详情Chi tiết" %}</a>
+                                <a href="{% url 'core:equipment_edit' eq.pk %}" class="btn btn-warning btn-sm">{% trans "修改Sửa" %}</a>
+                                <a href="{% url 'core:equipment_delete' eq.pk %}" class="btn btn-danger btn-sm"
+                                   onclick="return confirm('{% trans "确定删除" %} {{ eq.name }} {% trans "吗？" %}')">
+                                    {% trans "删除Xóa" %}
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
@@ -132,7 +143,6 @@
                 </table>
             </div>
 
-            <!-- 分页 -->
             <div class="d-flex justify-content-between align-items-center mt-4">
                 <div>
                     {% trans "第" %} {{ page_obj.number }} {% trans "页" %} / {% trans "共" %} {{ paginator.num_pages }} {% trans "页" %}
@@ -141,7 +151,8 @@
                     <ul class="pagination">
                         {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_area %}&area={{ selected_area }}{% endif %}{% if selected_line %}&line={{ selected_line }}{% endif %}">
+                            <a class="page-link"
+                               href="?page={{ page_obj.previous_page_number }}{% if selected_area %}&area={{ selected_area }}{% endif %}{% if selected_line %}&line={{ selected_line }}{% endif %}">
                                 {% trans "上一页" %}
                             </a>
                         </li>
@@ -149,7 +160,8 @@
 
                         {% for num in paginator.page_range %}
                         <li class="page-item {% if num == page_obj.number %}active{% endif %}">
-                            <a class="page-link" href="?page={{ num }}{% if selected_area %}&area={{ selected_area }}{% endif %}{% if selected_line %}&line={{ selected_line }}{% endif %}">
+                            <a class="page-link"
+                               href="?page={{ num }}{% if selected_area %}&area={{ selected_area }}{% endif %}{% if selected_line %}&line={{ selected_line }}{% endif %}">
                                 {{ num }}
                             </a>
                         </li>
@@ -157,7 +169,8 @@
 
                         {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_area %}&area={{ selected_area }}{% endif %}{% if selected_line %}&line={{ selected_line }}{% endif %}">
+                            <a class="page-link"
+                               href="?page={{ page_obj.next_page_number }}{% if selected_area %}&area={{ selected_area }}{% endif %}{% if selected_line %}&line={{ selected_line }}{% endif %}">
                                 {% trans "下一页" %}
                             </a>
                         </li>

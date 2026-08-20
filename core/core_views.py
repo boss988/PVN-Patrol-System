@@ -64,7 +64,7 @@ def equipment_create(request):
         line = request.POST.get('line', '').strip()
         model_type = request.POST.get('model_type', '').strip()
         area = request.POST.get('area', '')
-        category = category,  # 仅设备类别
+        category = request.POST.get('category', '').strip()  # 设备/治具类别
         eq_type = request.POST.get('eq_type', '')
 
         if not rfid_card or not rfid_card.strip():
@@ -179,33 +179,50 @@ def equipment_edit(request, pk):
     }
 
     if request.method == 'POST':
-        name = request.POST.get('name')
+        name = request.POST.get('name', '').strip()
         station = request.POST.get('station', '').strip()
         line = request.POST.get('line', '').strip()
-        rfid_card = request.POST.get('rfid_card')
+        rfid_card = request.POST.get('rfid_card', '').strip()
         area = request.POST.get('area', '').strip()
         category = request.POST.get('category', '').strip()
         eq_type = request.POST.get('eq_type', '').strip()
         model_type = request.POST.get('model_type', '').strip()
+        status = request.POST.get('status', 'active').strip()
+        model = request.POST.get('model', '').strip()
+        location = request.POST.get('location', '').strip()
+        install_date = request.POST.get('install_date', '').strip()
+        position = request.POST.get('position', '0').strip() or '0'
 
-        if rfid_card and rfid_card.strip():
-            if Equipment.objects.filter(rfid_card=rfid_card.strip()).exclude(pk=pk).exists():
+        if rfid_card:
+            if Equipment.objects.filter(rfid_card=rfid_card).exclude(pk=pk).exists():
                 messages.error(request, '❌ 该RFID卡号已被其他设备使用！')
                 return render(request, 'core/equipment_edit.html', context)
 
-        equipment.name = name
+        equipment.name = name or equipment.name
         equipment.station = station
         equipment.line = line
-        equipment.rfid_card = rfid_card.strip() if rfid_card else equipment.rfid_card
+        equipment.rfid_card = rfid_card if rfid_card else equipment.rfid_card
         equipment.area = area
         equipment.category = category
         equipment.eq_type = eq_type
         equipment.model_type = model_type
-        equipment.save()
+        equipment.status = status if status in ('active', 'inactive', 'maintenance') else equipment.status
+        equipment.model = model
+        equipment.location = location
+        if install_date:
+            equipment.install_date = install_date
+        try:
+            equipment.position = int(position)
+        except Exception:
+            equipment.position = equipment.position or 0
 
+        # 上传照片
+        if request.FILES.get('photo'):
+            equipment.photo = request.FILES['photo']
+
+        equipment.save()
         messages.success(request, '✅ 设备编辑成功！')
         return redirect('core:equipment_list')
-
     return render(request, 'core/equipment_edit.html', context)
 
 @login_required
@@ -281,7 +298,7 @@ def equipment_list(request):
     selected_area = request.GET.get('area', '')
     selected_line = request.GET.get('line', '')
 
-    equipments = Equipment.objects.all().order_by('area', 'line', 'position')
+    equipments = Equipment.objects.select_related('design_info').all().order_by('area', 'line', 'position')
 
     # 应用搜索条件
     if form.is_valid():
@@ -361,25 +378,29 @@ def equipment_list(request):
 
 @login_required
 def equipment_import(request):
-    """从Excel导入设备 - 严格按工作表1格式（带详细log + code唯一检查）"""
+    """
+    从Excel导入设备
+    - 工作表1，表头固定列名
+    - code 唯一
+    - 线别必须在产线配置表中，否则跳过（卡关）
+    """
     from django.contrib import messages
+    from django.conf import settings
+    from issues.issues_models import ProductionLineConfig
     import pandas as pd
     from datetime import date
-    from django.utils import timezone
     import os
 
     if request.method == 'POST' and request.FILES.get('excel_file'):
         excel_file = request.FILES['excel_file']
-        log = []  # 实时日志
+        log = []
         success_count = 0
         skip_count = 0
         error_count = 0
 
         try:
-            # 只读取第一个工作表（工作表1）
             df = pd.read_excel(excel_file, sheet_name=0, header=0)
 
-            # 列名映射（严格匹配你Excel的列名）
             column_map = {
                 '90流水號': 'code',
                 '名稱': 'name',
@@ -392,70 +413,92 @@ def equipment_import(request):
                 '类型': 'eq_type',
             }
 
-            # 检查必要列是否存在
             missing = [col for col in column_map.keys() if col not in df.columns]
             if missing:
                 messages.error(request, f'❌ Excel缺少以下列：{missing}')
                 return redirect('core:equipment_list')
 
+            # ---------- 线别白名单（产线配置表） ----------
+            allowed_lines = set(
+                ProductionLineConfig.objects.filter(is_active=True)
+                .values_list('line', flat=True)
+            )
+            allowed_lines = {str(x).strip() for x in allowed_lines if x and str(x).strip()}
             log.append(f"✅ 成功读取 Excel，共 {len(df)} 行数据")
+            log.append(f"📋 允许的线别（配置表）：{sorted(allowed_lines)}")
+
+            if not allowed_lines:
+                messages.error(request, '❌ 产线配置表没有启用的线别，请先在后台配置！')
+                return redirect('core:equipment_list')
 
             for idx, row in df.iterrows():
                 row_num = idx + 2
                 raw_code = str(row.get('90流水號', '')).strip()
-
-                if not raw_code:
+                if not raw_code or raw_code.lower() == 'nan':
                     log.append(f"行 {row_num}：code为空，跳过")
                     continue
 
-                # === 1. code唯一性检查 ===
+                # 1. code 已存在
                 if Equipment.objects.filter(code=raw_code).exists():
                     log.append(f"行 {row_num}：⚠️ code={raw_code} 已存在，跳过")
                     skip_count += 1
                     continue
 
-                # === 2. 构建设备数据 ===
+                # 2. 线别必须在配置表中
+                line_val = str(row.get('線別', '')).strip()
+                if line_val.lower() == 'nan':
+                    line_val = ''
+                if line_val not in allowed_lines:
+                    log.append(
+                        f"行 {row_num}：❌ code={raw_code} 线别[{line_val}]不在配置表，跳过"
+                    )
+                    skip_count += 1
+                    continue
+
+                # 3. 组装并创建
                 equipment_data = {
                     'code': raw_code,
                     'name': str(row.get('名稱', '')).strip() or '未命名设备',
                     'category': str(row.get('類別', '')).strip(),
                     'model_type': str(row.get('機種', '')).strip(),
-                    'line': str(row.get('線別', '')).strip(),
+                    'line': line_val,
                     'area': str(row.get('區域', '')).strip(),
                     'station': str(row.get('站別', '')).strip(),
                     'eq_type': str(row.get('类型', '')).strip(),
                     'install_date': date.today(),
-                    'rfid_card': raw_code,  # 默认和code一致
+                    'rfid_card': raw_code,
                     'status': 'active' if str(row.get('啟用狀態', '1')).strip() == '1' else 'active',
                 }
+                # 清理可能的 nan 字符串
+                for k, v in list(equipment_data.items()):
+                    if isinstance(v, str) and v.lower() == 'nan':
+                        equipment_data[k] = ''
 
                 try:
                     Equipment.objects.create(**equipment_data)
                     success_count += 1
-                    log.append(f"行 {row_num}：✅ code={raw_code} 导入成功！")
+                    log.append(f"行 {row_num}：✅ code={raw_code} 线别={line_val} 导入成功")
                 except Exception as e:
                     error_count += 1
                     log.append(f"行 {row_num}：❌ 导入失败 {str(e)}")
 
-            # === 3. 总结 + 保存log文件 ===
-            messages.success(request, f'✅ 导入完成！成功 {success_count} 条，跳过 {skip_count} 条（重复），失败 {error_count} 条')
+            messages.success(
+                request,
+                f'✅ 导入完成！成功 {success_count} 条，跳过 {skip_count} 条，失败 {error_count} 条'
+            )
 
-            # 保存详细log到文件（调试用）
             log_path = os.path.join(settings.BASE_DIR, 'logs', 'equipment_import_log.txt')
             os.makedirs(os.path.dirname(log_path), exist_ok=True)
             with open(log_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(log))
-            messages.info(request, f'📋 完整导入日志已保存到：logs/equipment_import_log.txt')
+            messages.info(request, '📋 完整日志：logs/equipment_import_log.txt')
 
         except Exception as e:
             messages.error(request, f'❌ 读取Excel失败：{str(e)}')
-            log.append(f'全局错误：{str(e)}')
 
         return redirect('core:equipment_list')
 
-    # GET请求显示导入页面
     return render(request, 'core/equipment_import.html', {'log': None})
-
 
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
