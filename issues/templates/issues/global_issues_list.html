@@ -12,7 +12,6 @@
         </div>
     </div>
 
-    <!-- 筛选 -->
     <div class="card mb-3">
         <div class="card-body py-2">
             <form method="get" class="row g-2 align-items-end">
@@ -80,7 +79,7 @@
 
     <div class="card">
         <div class="card-body p-0 table-responsive">
-            <table class="table table-bordered table-hover table-sm mb-0 text-center align-middle" style="font-size:13px;">
+            <table class="table table-bordered table-hover mb-0 text-center align-middle" style="font-size:13px;">
                 <thead class="table-light">
                 <tr>
                     <th style="width:36px;"><input type="checkbox" id="checkAll"></th>
@@ -106,7 +105,9 @@
                 </thead>
                 <tbody>
                 {% for issue in issues %}
-                <tr>
+
+                 <!-- =改数据行高度要再高就把 56 改成 72 -->
+                <tr style="height:56px;">
                     <td><input type="checkbox" class="row-check" value="{{ issue.id }}"></td>
                     <td>{{ issue.occur_date|date:"Y-m-d" }}</td>
                     <td>{{ issue.equipment.model_type|default:"-" }}</td>

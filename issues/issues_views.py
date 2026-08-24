@@ -440,12 +440,16 @@ def issue_create(request, equipment_pk=None):
 
     # 站别：按线体从设备表汇总 { line: [station, ...] }
     from collections import defaultdict
+    # 站别按「机种 + 线别」分组，避免不同机种同名线体混站
     stations_by_line = defaultdict(list)
-    for row in Equipment.objects.exclude(line__isnull=True).exclude(line='').exclude(station__isnull=True).exclude(station='').values('line', 'station'):
+    for row in Equipment.objects.exclude(line__isnull=True).exclude(line='').exclude(station__isnull=True).exclude(
+            station='').values('model_type', 'line', 'station'):
+        mt = (row['model_type'] or '').strip()
         line = row['line'].strip()
         st = row['station'].strip()
-        if st and st not in stations_by_line[line]:
-            stations_by_line[line].append(st)
+        key = mt + '||' + line
+        if st and st not in stations_by_line[key]:
+            stations_by_line[key].append(st)
     for k in stations_by_line:
         stations_by_line[k].sort()
 
@@ -480,7 +484,8 @@ def issue_create(request, equipment_pk=None):
             messages.error(request, '请填写异常原因（5个为什么）！')
             return redirect(request.path)
 
-        # 已锁定具体设备时，不再强制机种必须在配置表
+        # ---------- 校验机种 / 线体 ----------
+        # 已选中具体设备（从设备详情进来）时，不再强制机种、线体必须在配置表
         if not equipment_id:
             if not model_type or not ProductionLineConfig.objects.filter(
                     is_active=True, model_type=model_type
@@ -495,15 +500,7 @@ def issue_create(request, equipment_pk=None):
                 messages.error(request, '请选择配置表中的有效线体！')
                 return redirect(request.path)
 
-        # # 校验线体是否在配置表中
-        # cfg_ok = ProductionLineConfig.objects.filter(
-        #     is_active=True, model_type=model_type, line=line
-        # ).exists()
-        if not line or not cfg_ok:
-            messages.error(request, '请选择配置表中的有效线体！')
-            return redirect(request.path)
-
-        # 匹配设备
+        # ---------- 匹配设备 ----------
         equipment = None
         if equipment_id:
             equipment = Equipment.objects.filter(id=equipment_id).first()

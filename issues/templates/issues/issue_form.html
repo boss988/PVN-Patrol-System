@@ -9,7 +9,7 @@
         {% csrf_token %}
 
         <!-- ========== 机种 / 线体 / 站别（联动） ========== -->
-                <div class="card mb-3">
+        <div class="card mb-3">
             <div class="card-header fw-bold">设备位置Vị trí thiết bị</div>
             <div class="card-body">
                 {% if prefill.equipment_id %}
@@ -96,47 +96,48 @@
                         </select>
                     </div>
 
-            <div class="mb-3">
-                <label class="form-label">异常现象Hiện tượng <span class="text-danger">*</span></label>
-                <input type="text" name="desc" class="form-control"
-                       placeholder="客观事实，简短即可。例：焊接报废25pcs / 跳电停机10分钟"
-                       required maxlength="200">
-                <div class="form-text">只写看到的事实，不要在这里写分析。</div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">异常原因（5个为什么）Nguyên nhân (5 Why) <span class="text-danger">*</span></label>
-                <textarea name="spare_field_1" class="form-control" rows="5" required
-                          placeholder="用「为什么」追问到真因，例如：&#10;1.为什么报废？→ 焊点虚焊&#10;2.为什么虚焊？→ 温度不稳&#10;3.为什么温度不稳？→ 温控器老化&#10;4.为什么没发现？→ 未点检温控&#10;5.为什么未点检？→ 开线时没看"></textarea>
-                <div class="form-text text-muted">
-                    提示：连续问「为什么」，尽量问到可采取对策的那一层（真因）。时间/线体/站别已在上方记录，这里专注原因分析。
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>
-                <textarea name="root_cause" class="form-control" rows="2"
-                          placeholder="已采取或计划采取的措施"></textarea>
-            </div>
+                    <div class="mb-3">
+                        <label class="form-label">异常现象Hiện tượng <span class="text-danger">*</span></label>
+                        <input type="text" name="desc" class="form-control"
+                               placeholder="客观事实，简短即可。例：焊接报废25pcs / 跳电停机10分钟"
+                               required maxlength="200">
+                        <div class="form-text">只写看到的事实，不要在这里写分析。</div>
                     </div>
-                    <div class="col-12">
+
+                    <div class="mb-3">
+                        <label class="form-label">异常原因（5个为什么）Nguyên nhân (5 Why) <span
+                                class="text-danger">*</span></label>
+                        <textarea name="spare_field_1" class="form-control" rows="5" required
+                                  placeholder="用「为什么」追问到真因，例如：&#10;1.为什么报废？→ 焊点虚焊&#10;2.为什么虚焊？→ 温度不稳&#10;3.为什么温度不稳？→ 温控器老化&#10;4.为什么没发现？→ 未点检温控&#10;5.为什么未点检？→ 开线时没看"></textarea>
+                        <div class="form-text text-muted">
+                            提示：连续问「为什么」，尽量问到可采取对策的那一层（真因）。时间/线体/站别已在上方记录，这里专注原因分析。
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>
                         <textarea name="root_cause" class="form-control" rows="2"
                                   placeholder="已采取或计划采取的措施"></textarea>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label">照片 / 视频Ảnh / Video（可多选）</label>
-                        <input type="file" name="photos" class="form-control" accept="image/*,video/*" multiple>
-                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>
+                    <textarea name="root_cause" class="form-control" rows="2"
+                              placeholder="已采取或计划采取的措施"></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">照片 / 视频Ảnh / Video（可多选）</label>
+                    <input type="file" name="photos" class="form-control" accept="image/*,video/*" multiple>
                 </div>
             </div>
         </div>
+</div>
 
-        <div class="d-flex gap-2 mb-5">
-            <button type="submit" class="btn btn-primary btn-lg">✅ 保存Lưu</button>
-            <a href="{% url 'issues:global_issues_list' %}" class="btn btn-secondary btn-lg">取消Hủy</a>
-        </div>
-    </form>
+<div class="d-flex gap-2 mb-5">
+    <button type="submit" class="btn btn-primary btn-lg">✅ 保存Lưu</button>
+    <a href="{% url 'issues:global_issues_list' %}" class="btn btn-secondary btn-lg">取消Hủy</a>
+</div>
+</form>
 </div>
 
 <script>
@@ -209,7 +210,8 @@ lineEl.addEventListener('change', function () {
     equipmentIdEl.value = '';
     if (!line) return;
 
-    const stations = STATIONS_BY_LINE[line] || [];
+    const key = mt + '||' + line;
+    const stations = STATIONS_BY_LINE[key] || [];
     stations.forEach(function (st) {
         const opt = document.createElement('option');
         opt.value = st;
@@ -224,7 +226,6 @@ lineEl.addEventListener('change', function () {
         hintEl.className = 'text-muted';
     }
 
-    // 自动带出配置表主管
     if (supervisorEl) {
         for (let i = 0; i < CONFIGS.length; i++) {
             const c = CONFIGS[i];
@@ -246,7 +247,8 @@ stationEl.addEventListener('change', function () {
     let found = null;
     for (let i = 0; i < EQUIPMENTS.length; i++) {
         const eq = EQUIPMENTS[i];
-        if (eq.line === line && eq.station === station) {
+                if (eq.line === line && eq.station === station &&
+            (!modelTypeEl.value || eq.model_type === modelTypeEl.value)) {
             found = eq;
             break;
         }
@@ -324,5 +326,7 @@ stationEl.addEventListener('change', function () {
     }
     setTimeout(pickCategory, 30);
 })();
+
+
 </script>
 {% endblock %}

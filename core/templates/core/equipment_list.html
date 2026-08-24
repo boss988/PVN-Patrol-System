@@ -31,13 +31,15 @@
                             <div class="accordion-body p-0">
                                 <div class="list-group list-group-flush">
                                     {% for line in item.lines %}
-                                    <a href="{% url 'core:equipment_list' %}?area={{ item.area|urlencode }}&line={{ line|urlencode }}"
-                                       class="list-group-item list-group-item-action ps-4 {% if selected_area == item.area and selected_line == line %}active{% endif %}">
-                                        🔧 {{ line }}
+                                    <a href="{% url 'core:equipment_list' %}?area={{ item.area|urlencode }}&line={{ line.line|urlencode }}&model_type={{ line.model_type|urlencode }}"
+                                       class="list-group-item list-group-item-action ps-4 {% if selected_area == item.area and selected_line == line.line and selected_model_type == line.model_type %}active{% endif %}">
+                                        🔧 {% if line.model_type %}{{ line.model_type }}-{% endif %}{{ line.line }}
                                     </a>
                                     {% empty %}
                                     <div class="list-group-item ps-4 text-muted small">（无线别）</div>
                                     {% endfor %}
+
+
                                 </div>
                             </div>
                         </div>
@@ -105,9 +107,10 @@
                         <td class="small">{{ eq.get_status_display }}</td>
                         <td>
                             {% if eq.photo %}
+                            <!-- 改图片大小height 100px / 120更大、更好认 -->
                             <a href="{{ eq.photo.url }}" target="_blank">
                                 <img src="{{ eq.photo.url }}" alt=""
-                                     style="height:72px;width:72px;object-fit:cover;border-radius:6px;">
+                                     style="height:100px;width:100px;object-fit:cover;border-radius:6px;">
                             </a>
                             {% elif eq.design_info.image %}
                             <a href="{{ eq.design_info.image.url }}" target="_blank">

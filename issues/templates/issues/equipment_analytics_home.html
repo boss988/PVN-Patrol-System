@@ -103,25 +103,48 @@
                     pointHoverRadius: 6
                 }]
             },
-            options: {
-                responsive: true,
-                onClick: function (evt, elements) {
-                    if (!elements.length) return;
-                    var idx = elements[0].index;
-                    var point = c.pointKeys[idx];
-                    window.location.href = '/issues/analytics/' + encodeURIComponent(c.model) + '/' + c.mode + '/' + point + '/';
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function (ctx) { return ctx.parsed.y + ' min（点击下钻线体）'; }
-                        }
+                    options: {
+            responsive: true,
+            onClick: function (evt, elements) {
+                if (!elements.length) return;
+                var idx = elements[0].index;
+                var point = c.pointKeys[idx];
+                if (!point) return;
+                window.location.href = '/issues/analytics/' + encodeURIComponent(c.model) + '/' + c.mode + '/' + point + '/';
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) { return ctx.parsed.y + ' min（点击下钻线体）'; }
                     }
-                },
-                scales: {
-                    y: { beginAtZero: true, title: { display: true, text: '分钟' } }
                 }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: '分钟' } }
             }
+        },
+        plugins: [{
+            id: 'valueLabels',
+            afterDatasetsDraw: function (chart) {
+                var ctx = chart.ctx;
+                chart.data.datasets.forEach(function (ds, i) {
+                    var meta = chart.getDatasetMeta(i);
+                    if (!meta || meta.hidden) return;
+                    meta.data.forEach(function (pt, j) {
+                        var v = ds.data[j];
+                        if (v === null || v === undefined) return;
+                        ctx.save();
+                        ctx.font = '12px sans-serif';
+                        ctx.fillStyle = '#333';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        if (v === 0) return;
+                        ctx.fillText(String(v) + ' min', pt.x, pt.y - 6);
+                        ctx.restore();
+                    });
+                });
+            }
+        }]
         });
     });
 })();

@@ -147,6 +147,7 @@ def dashboard(request):
         'selected_line': line,
         'total_equipments': total_equipments,
         'alarms_today': 0,   # 后面接报警表后再改
+
     })
 
 
@@ -297,8 +298,11 @@ def equipment_list(request):
     # 获取筛选参数
     selected_area = request.GET.get('area', '')
     selected_line = request.GET.get('line', '')
+    selected_model_type = request.GET.get('model_type', '')
 
-    equipments = Equipment.objects.select_related('design_info').all().order_by('area', 'line', 'position')
+    equipments = Equipment.objects.select_related('design_info').all().order_by(
+        'area', 'model_type', 'line', 'station', 'position'
+    ).all().order_by('area', 'line', 'position')
 
     # 应用搜索条件
     if form.is_valid():
@@ -329,6 +333,8 @@ def equipment_list(request):
         equipments = equipments.filter(area=selected_area)
     if selected_line:
         equipments = equipments.filter(line=selected_line)
+    if selected_model_type:
+        equipments = equipments.filter(model_type=selected_model_type)
 
     # ====== 分页逻辑（每页50条）======
     paginator = Paginator(equipments, 50)
@@ -339,29 +345,27 @@ def equipment_list(request):
     # 目的：每个厂别只显示自己真实存在的线别，不会把其他厂别的线别错误显示出来
     from collections import defaultdict
 
-    area_to_lines = defaultdict(set)  # 用 set 自动去重
-
-    # 只取 area 和 line 两个字段，提高效率
-    for item in Equipment.objects.values('area', 'line').distinct():
+    area_to_lines = defaultdict(list)
+    seen = set()
+    for item in Equipment.objects.values('area', 'model_type', 'line').distinct():
         area = item['area'] if item['area'] else '未指定厂别'
-        line = item['line']
-        if line:  # 只添加有线别的
-            area_to_lines[area].add(line)
+        line = (item['line'] or '').strip()
+        mt = (item['model_type'] or '').strip()
+        if not line:
+            continue
+        key = (area, mt, line)
+        if key in seen:
+            continue
+        seen.add(key)
+        area_to_lines[area].append({'model_type': mt, 'line': line})
 
-    # 转成有序列表，方便模板使用（按厂别名称排序）
     area_line_list = []
     for area in sorted(area_to_lines.keys()):
-        lines = sorted(list(area_to_lines[area]))  # 线别也排序
-        area_line_list.append({
-            'area': area,
-            'lines': lines
-        })
+        items = sorted(area_to_lines[area], key=lambda x: (x['model_type'], x['line']))
+        area_line_list.append({'area': area, 'lines': items})
 
-    # 保留原来的变量名，避免其他地方报错（兼容）
     area_list = [item['area'] for item in area_line_list]
-    line_list = []  # 不再使用全局 line_list
-
-
+    line_list = []
 
     return render(request, 'core/equipment_list.html', {
         'equipments': page_obj,
@@ -371,9 +375,12 @@ def equipment_list(request):
         'line_list': line_list,  # 兼容保留
         'selected_area': selected_area,
         'selected_line': selected_line,
+        'selected_model_type': selected_model_type,
         'page_obj': page_obj,
         'paginator': paginator,
         'license_ok': True
+
+
     })
 
 @login_required
