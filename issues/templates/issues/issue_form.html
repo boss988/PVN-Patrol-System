@@ -95,6 +95,19 @@
                             {% endfor %}
                         </select>
                     </div>
+                                        <div class="col-md-4">
+                        <label class="form-label">处理人Người xử lý</label>
+                        <input type="text" name="spare_field_2" class="form-control"
+                               placeholder="实际处理人员">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">状态Trạng thái</label>
+                        <select name="spare_field_3" class="form-select">
+                            <option value="Open" selected>Open</option>
+                            <option value="Ongoing">Ongoing</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label">异常现象Hiện tượng <span class="text-danger">*</span></label>
@@ -120,11 +133,7 @@
                                   placeholder="已采取或计划采取的措施"></textarea>
                     </div>
                 </div>
-                <div class="col-12">
-                    <label class="form-label">改善 / 处理方法Cách xử lý / cải thiện</label>
-                    <textarea name="root_cause" class="form-control" rows="2"
-                              placeholder="已采取或计划采取的措施"></textarea>
-                </div>
+
                 <div class="col-12">
                     <label class="form-label">照片 / 视频Ảnh / Video（可多选）</label>
                     <input type="file" name="photos" class="form-control" accept="image/*,video/*" multiple>

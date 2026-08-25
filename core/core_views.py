@@ -150,6 +150,26 @@ def dashboard(request):
 
     })
 
+@login_required
+def equipment_update_position(request, pk):
+    """
+    总表双击修改产线排序（只改 position，按机种+线体各自编号）
+    """
+    from django.http import JsonResponse
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'msg': '只接受POST'}, status=405)
+
+    equipment = get_object_or_404(Equipment, pk=pk)
+    raw = request.POST.get('position', '').strip()
+    try:
+        pos = int(raw)
+    except Exception:
+        return JsonResponse({'ok': False, 'msg': '请输入整数'})
+
+    equipment.position = pos
+    equipment.save(update_fields=['position'])
+    return JsonResponse({'ok': True, 'position': pos})
 
 @login_required
 def equipment_edit(request, pk):
@@ -301,8 +321,8 @@ def equipment_list(request):
     selected_model_type = request.GET.get('model_type', '')
 
     equipments = Equipment.objects.select_related('design_info').all().order_by(
-        'area', 'model_type', 'line', 'station', 'position'
-    ).all().order_by('area', 'line', 'position')
+        'area', 'model_type', 'line', 'position', 'station'
+    )
 
     # 应用搜索条件
     if form.is_valid():

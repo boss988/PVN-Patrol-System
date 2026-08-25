@@ -52,6 +52,19 @@
                             {% endfor %}
                         </select>
                     </div>
+                                        <div class="col-md-4">
+                        <label class="form-label">处理人Người xử lý</label>
+                        <input type="text" name="spare_field_2" class="form-control"
+                               value="{{ issue.spare_field_2|default:'' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">状态Trạng thái</label>
+                        <select name="spare_field_3" class="form-select">
+                            <option value="Open" {% if issue.spare_field_3 == 'Open' or not issue.spare_field_3 %}selected{% endif %}>Open</option>
+                            <option value="Ongoing" {% if issue.spare_field_3 == 'Ongoing' %}selected{% endif %}>Ongoing</option>
+                            <option value="Closed" {% if issue.spare_field_3 == 'Closed' %}selected{% endif %}>Closed</option>
+                        </select>
+                    </div>
 
                     <div class="col-12">
                         <label class="form-label">异常现象Hiện tượng <span class="text-danger">*</span></label>

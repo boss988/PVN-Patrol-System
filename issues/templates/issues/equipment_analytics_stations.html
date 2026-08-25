@@ -1,69 +1,65 @@
 {% extends 'base.html' %}
-{% block title %}{{ model }} {{ line }} 站别明细{% endblock %}
+{% load static %}
+{% block title %}{{ model }} {{ line }} 站别分析{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4 mt-3">
+<div class="container-fluid px-3 mt-3">
     <div class="mb-3">
-        <a href="{% url 'issues:equipment_analytics_lines' model mode point %}" class="text-decoration-none">
-            ← 返回线体明细
-        </a>
-        <h3 class="mt-2">
-            {{ model }} · {{ title_point }} · {{ line }} · 站别明细Chi tiết trạm
-        </h3>
+        <a href="{% url 'issues:equipment_analytics_lines' model mode point %}" class="text-decoration-none">← 返回线体分析Quay lại tuyến</a>
+        <h4 class="mt-1 mb-0">{{ model }} · {{ title_point }} · {{ line }} · 站别分析Chi tiết trạm</h4>
+        <div class="text-muted small">合计Tổng {{ total_minutes }} min　/　{{ total_count }} 条</div>
     </div>
 
     <div class="row g-3">
-        <!-- 站别表 -->
-        <div class="col-md-7">
-            <div class="card shadow-sm">
-                <div class="card-header fw-bold">各站异常时间Theo trạm</div>
-                <div class="card-body p-0">
-                    <table class="table table-bordered table-hover table-sm mb-0 text-center align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>站别Trạm</th>
-                                <th>异常时间 (min)</th>
-                                <th>记录数</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for row in station_details %}
-                            <tr>
-                                <td>{{ row.station }}</td>
-                                <td class="fw-bold">{{ row.minutes }}</td>
-                                <td>{{ row.count }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr><td colspan="3" class="text-muted py-3">无数据</td></tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">各站异常时间Theo trạm (min)</div>
+                <div class="card-body" style="height:320px;">
+                    <canvas id="chartStation" width="520" height="280"></canvas>
                 </div>
             </div>
         </div>
-
-        <!-- 类别汇总 -->
-        <div class="col-md-5">
-            <div class="card shadow-sm">
-                <div class="card-header fw-bold">问题类别Loại vấn đề</div>
-                <div class="card-body p-0">
-                    <table class="table table-bordered table-sm mb-0 text-center align-middle">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">问题类别Loại vấn đề (min)</div>
+                <div class="card-body" style="height:320px;">
+                    <canvas id="chartCat" width="520" height="280"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">状态Trạng thái (min)</div>
+                <div class="card-body" style="height:320px;">
+                    <canvas id="chartStatus" width="520" height="280"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">记录（前20）Bản ghi</div>
+                <div class="card-body p-0 table-responsive" style="max-height:320px;">
+                    <table class="table table-sm table-hover mb-0 text-center align-middle">
                         <thead class="table-light">
-                            <tr>
-                                <th>类别</th>
-                                <th>时间(min)</th>
-                                <th>条数</th>
-                            </tr>
+                        <tr>
+                            <th>站Trạm</th>
+                            <th>min</th>
+                            <th>状态</th>
+                            <th>处理人</th>
+                            <th></th>
+                        </tr>
                         </thead>
                         <tbody>
-                        {% for row in category_details %}
-                            <tr>
-                                <td class="text-start">{{ row.name }}</td>
-                                <td class="fw-bold">{{ row.minutes }}</td>
-                                <td>{{ row.count }}</td>
-                            </tr>
+                        {% for issue in record_list %}
+                        <tr>
+                            <td>{{ issue.equipment.station|default:"-" }}</td>
+                            <td class="fw-bold">{{ issue.abnormal_work_time }}</td>
+                            <td>{{ issue.spare_field_3|default:"Open" }}</td>
+                            <td class="small">{{ issue.spare_field_2|default:"-" }}</td>
+                            <td><a class="btn btn-sm btn-outline-primary py-0" href="{% url 'issues:issue_detail' issue.pk %}">详情</a></td>
+                        </tr>
                         {% empty %}
-                            <tr><td colspan="3" class="text-muted py-3">无数据</td></tr>
+                        <tr><td colspan="5" class="text-muted py-3">无数据Không có dữ liệu</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>
@@ -72,4 +68,129 @@
         </div>
     </div>
 </div>
+
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+var stLabels = {{ st_labels_json|safe }};
+var stValues = {{ st_values_json|safe }};
+var catLabels = {{ cat_labels_json|safe }};
+var catValues = {{ cat_values_json|safe }};
+var statusLabels = {{ status_labels_json|safe }};
+var statusValues = {{ status_values_json|safe }};
+
+var valueLabelPlugin = {
+    id: 'valueLabels',
+    afterDatasetsDraw: function (chart) {
+        if (chart.config.type === 'doughnut') return;
+        var ctx = chart.ctx;
+        chart.data.datasets.forEach(function (ds, i) {
+            var meta = chart.getDatasetMeta(i);
+            if (!meta || meta.hidden) return;
+            meta.data.forEach(function (pt, j) {
+                var v = ds.data[j];
+                if (!v) return;
+                ctx.save();
+                ctx.font = '12px sans-serif';
+                ctx.fillStyle = '#333';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(String(v) + ' min', pt.x, pt.y - 4);
+                ctx.restore();
+            });
+        });
+    }
+};
+
+function makeNiceLabels(labels, values) {
+    var total = 0;
+    for (var i = 0; i < values.length; i++) {
+        total += Number(values[i] || 0);
+    }
+    var nice = [];
+    for (var j = 0; j < labels.length; j++) {
+        var v = Number(values[j] || 0);
+        var p = total > 0 ? Math.round(v / total * 100) : 0;
+        nice.push(labels[j] + ' (' + v + ' min, ' + p + '%)');
+    }
+    return nice;
+}
+
+function doughnutPctPlugin(id) {
+    return {
+        id: 'doughnutPct_' + id,
+        afterDatasetsDraw: function (chart) {
+            if (chart.config.type !== 'doughnut') return;
+            var ctx = chart.ctx;
+            var ds = chart.data.datasets[0];
+            var meta = chart.getDatasetMeta(0);
+            var sum = 0;
+            for (var k = 0; k < ds.data.length; k++) {
+                sum += Number(ds.data[k] || 0);
+            }
+            meta.data.forEach(function (arc, idx) {
+                var val = Number(ds.data[idx] || 0);
+                if (!val || !sum) return;
+                var pct = Math.round(val / sum * 100);
+                var pos = arc.tooltipPosition();
+                ctx.save();
+                ctx.fillStyle = '#fff';
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(pct + '%', pos.x, pos.y);
+                ctx.fillText(pct + '%', pos.x, pos.y);
+                ctx.restore();
+            });
+        }
+    };
+}
+
+new Chart(document.getElementById('chartStation'), {
+    type: 'bar',
+    data: { labels: stLabels, datasets: [{ label: 'min', data: stValues, backgroundColor: ['#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2', '#edc948', '#b07aa1', '#ff9da7'] }] },
+    options: {
+        indexAxis: 'y',
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+    },
+    plugins: [valueLabelPlugin]
+});
+
+new Chart(document.getElementById('chartCat'), {
+    type: 'doughnut',
+    data: {
+        labels: makeNiceLabels(catLabels, catValues),
+        datasets: [{ data: catValues, backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1'], borderWidth: 2 }]
+    },
+    options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: false,
+        cutout: '55%',
+        plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 }, padding: 10 } } }
+    },
+    plugins: [doughnutPctPlugin('chartCat')]
+});
+
+new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+        labels: makeNiceLabels(statusLabels, statusValues),
+        datasets: [{ data: statusValues, backgroundColor: ['#dc3545', '#ffc107', '#198754'], borderWidth: 2 }]
+    },
+    options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: false,
+        cutout: '55%',
+        plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 }, padding: 10 } } }
+    },
+    plugins: [doughnutPctPlugin('chartStatus')]
+});
+</script>
 {% endblock %}

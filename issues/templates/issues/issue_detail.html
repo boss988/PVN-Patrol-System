@@ -24,11 +24,17 @@
                 <div class="col-md-4"><strong>机种Loại máy：</strong>{{ issue.equipment.model_type|default:"-" }}</div>
                 <div class="col-md-4"><strong>线体Tuyến：</strong>{{ issue.equipment.line|default:"-" }}</div>
                 <div class="col-md-4"><strong>站别Trạm：</strong>{{ issue.equipment.station|default:"-" }}</div>
-                <div class="col-md-6"><strong>设备Thiết bị：</strong>{{ issue.equipment.code }} - {{ issue.equipment.name }}</div>
+                <div class="col-md-6"><strong>设备Thiết bị：</strong>{{ issue.equipment.code }} - {{ issue.equipment.name
+                    }}
+                </div>
                 <div class="col-md-3"><strong>异常工时Thời gian：</strong>{{ issue.abnormal_work_time }} min</div>
                 <div class="col-md-3"><strong>严重度Mức độ：</strong>{{ issue.get_severity_display }}</div>
                 <div class="col-md-4"><strong>问题类别Loại vấn đề：</strong>{{ issue.category.name|default:"-" }}</div>
-                <div class="col-md-8"><strong>责任主管Chủ quản：</strong>{{ issue.supervisor|default:"-" }}</div>
+                <div class="col-md-4"><strong>责任主管Chủ quản：</strong>{{ issue.supervisor|default:"-" }}</div>
+                <div class="col-md-4"><strong>处理人Người xử lý：</strong>{{ issue.spare_field_2|default:"-" }}</div>
+                <div class="col-md-4"><strong>状态Trạng thái：</strong>{{ issue.spare_field_3|default:"Open" }}</div>
+
+
             </div>
         </div>
     </div>
@@ -55,10 +61,18 @@
         <div class="card-header fw-bold">导入相关Có thể nhập module</div>
         <div class="card-body">
             <div class="row g-2">
-                <div class="col-md-6">保养Bảo dưỡng：{% if issue.can_import_maintenance %}✅{% else %}❌{% endif %}　ID：{{ issue.maintenance_id|default:"-" }}</div>
-                <div class="col-md-6">设计Thiết kế：{% if issue.can_import_design %}✅{% else %}❌{% endif %}　ID：{{ issue.design_id|default:"-" }}</div>
-                <div class="col-md-6">培训Đào tạo：{% if issue.can_import_training %}✅{% else %}❌{% endif %}　ID：{{ issue.training_id|default:"-" }}</div>
-                <div class="col-md-6">维修Sửa chữa：{% if issue.can_import_repair %}✅{% else %}❌{% endif %}　ID：{{ issue.repair_id|default:"-" }}</div>
+                <div class="col-md-6">保养Bảo dưỡng：{% if issue.can_import_maintenance %}✅{% else %}❌{% endif %}　ID：{{
+                    issue.maintenance_id|default:"-" }}
+                </div>
+                <div class="col-md-6">设计Thiết kế：{% if issue.can_import_design %}✅{% else %}❌{% endif %}　ID：{{
+                    issue.design_id|default:"-" }}
+                </div>
+                <div class="col-md-6">培训Đào tạo：{% if issue.can_import_training %}✅{% else %}❌{% endif %}　ID：{{
+                    issue.training_id|default:"-" }}
+                </div>
+                <div class="col-md-6">维修Sửa chữa：{% if issue.can_import_repair %}✅{% else %}❌{% endif %}　ID：{{
+                    issue.repair_id|default:"-" }}
+                </div>
             </div>
         </div>
     </div>
@@ -68,7 +82,8 @@
         <div class="card-body">
             {% if issue.photo %}
             <a href="{{ issue.photo.url }}" target="_blank">
-                <img src="{{ issue.photo.url }}" alt="photo" style="max-height:220px; max-width:100%;" class="rounded border">
+                <img src="{{ issue.photo.url }}" alt="photo" style="max-height:220px; max-width:100%;"
+                     class="rounded border">
             </a>
             {% else %}
             <span class="text-muted">无Không có</span>

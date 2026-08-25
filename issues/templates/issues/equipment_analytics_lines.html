@@ -1,17 +1,56 @@
 {% extends 'base.html' %}
-{% block title %}{{ model }} 线体明细{% endblock %}
+{% load static %}
+{% block title %}{{ model }} · {{ title_point }} · 线体分析{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4 mt-3">
-    <div class="mb-3">
-        <a href="{% url 'issues:equipment_analytics_trend' model %}?mode={{ mode }}" class="text-decoration-none">←
-            返回趋势图</a>
-        <h3 class="mt-2">{{ model }} · {{ title_point }} · 线体明细Chi tiết tuyến</h3>
+<div class="container-fluid px-3 mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <a href="{% url 'issues:equipment_analytics' %}" class="text-decoration-none">← 返回趋势图Quay lại</a>
+            <h4 class="mb-0 mt-1">{{ model }} · {{ title_point }} · 线体分析Chi tiết tuyến</h4>
+            <div class="text-muted small">合计Tổng {{ total_minutes }} min　/　{{ total_count }} 条</div>
+        </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-bordered table-hover table-sm mb-0 text-center align-middle">
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">各线体异常时间Thời gian theo tuyến (min)</div>
+                <div class="card-body" style="height:260px;">
+                    <canvas id="chartLine" width="420" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">问题类别Loại vấn đề (min)</div>
+                <div class="card-body" style="height:260px;">
+                    <canvas id="chartCat" width="480" height="240"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">站别 Pareto Trạm (min，前10)</div>
+                <div class="card-body" style="height:260px;">
+                    <canvas id="chartStation" width="420" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header fw-bold">状态Trạng thái (min)</div>
+                <div class="card-body" style="height:260px;">
+                    <canvas id="chartStatus" width="480" height="240"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header fw-bold">线体明细Bảng tuyến</div>
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-bordered table-hover mb-0 text-center align-middle">
                 <thead class="table-light">
                 <tr>
                     <th>线体Tuyến</th>
@@ -27,20 +66,155 @@
                     <td class="fw-bold">{{ row.minutes }}</td>
                     <td>{{ row.count }}</td>
                     <td>
-                        <a href="{% url 'issues:equipment_analytics_stations' model mode point row.line %}"
-                           class="btn btn-sm btn-outline-primary">
-                            看站别Xem trạm
-                        </a>
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="{% url 'issues:equipment_analytics_stations' model mode point row.line %}">看站别Xem trạm</a>
                     </td>
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="4" class="text-muted py-4">该时间点无数据</td>
-                </tr>
+                <tr><td colspan="4" class="text-muted py-4">该时间点无数据Không có dữ liệu</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<script src="{% static 'js/chart.umd.min.js' %}"></script>
+<script>
+var lineLabels = {{ line_labels_json|safe }};
+var lineValues = {{ line_values_json|safe }};
+var catLabels = {{ cat_labels_json|safe }};
+var catValues = {{ cat_values_json|safe }};
+var stLabels = {{ st_labels_json|safe }};
+var stValues = {{ st_values_json|safe }};
+var statusLabels = {{ status_labels_json|safe }};
+var statusValues = {{ status_values_json|safe }};
+var modelName = "{{ model|escapejs }}";
+var modeName = "{{ mode|escapejs }}";
+var pointName = "{{ point|escapejs }}";
+
+var valueLabelPlugin = {
+    id: 'valueLabels',
+    afterDatasetsDraw: function (chart) {
+        var ctx = chart.ctx;
+        chart.data.datasets.forEach(function (ds, i) {
+            var meta = chart.getDatasetMeta(i);
+            if (!meta || meta.hidden) return;
+            meta.data.forEach(function (pt, j) {
+                var v = ds.data[j];
+                if (!v) return;
+                ctx.save();
+                ctx.font = '12px sans-serif';
+                ctx.fillStyle = '#333';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(String(v) + ' min', pt.x, pt.y - 4);
+                ctx.restore();
+            });
+        });
+    }
+};
+
+function drawBar(id, labels, values, horizontal) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    new Chart(el, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'min', data: values, backgroundColor: ['#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2', '#edc948', '#b07aa1', '#ff9da7'] }]
+        },
+        options: {
+            indexAxis: horizontal ? 'y' : 'x',
+            responsive: false,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true }, y: { beginAtZero: true } }
+        },
+        plugins: [valueLabelPlugin]
+    });
+}
+
+function drawDoughnut(id, labels, values) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var total = 0;
+    for (var i = 0; i < values.length; i++) {
+        total += Number(values[i] || 0);
+    }
+    var nice = [];
+    for (var j = 0; j < labels.length; j++) {
+        var v = Number(values[j] || 0);
+        var p = total > 0 ? Math.round(v / total * 100) : 0;
+        nice.push(labels[j] + ' (' + v + ' min, ' + p + '%)');
+    }
+    var pctPlugin = {
+        id: 'doughnutPct_' + id,
+        afterDatasetsDraw: function (chart) {
+            if (chart.config.type !== 'doughnut') return;
+            var ctx = chart.ctx;
+            var ds = chart.data.datasets[0];
+            var meta = chart.getDatasetMeta(0);
+            var sum = 0;
+            for (var k = 0; k < ds.data.length; k++) {
+                sum += Number(ds.data[k] || 0);
+            }
+            meta.data.forEach(function (arc, idx) {
+                var val = Number(ds.data[idx] || 0);
+                if (!val || !sum) return;
+                var pct = Math.round(val / sum * 100);
+                var pos = arc.tooltipPosition();
+                ctx.save();
+                ctx.fillStyle = '#fff';
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(pct + '%', pos.x, pos.y);
+                ctx.fillText(pct + '%', pos.x, pos.y);
+                ctx.restore();
+            });
+        }
+    };
+    new Chart(el, {
+        type: 'doughnut',
+        data: {
+            labels: nice,
+            datasets: [{
+                data: values,
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            animation: false,
+            cutout: '55%',
+            plugins: {
+
+                             legend: { position: 'right', labels: { boxWidth: 12, font: { size: 12 }, padding: 10 } }
+            }
+        },
+        plugins: [pctPlugin]
+    });
+}
+
+drawBar('chartLine', lineLabels, lineValues, false);
+drawDoughnut('chartCat', catLabels, catValues);
+drawBar('chartStation', stLabels, stValues, true);
+drawDoughnut('chartStatus', statusLabels, statusValues);
+
+document.getElementById('chartLine').onclick = function (evt) {
+    var chart = Chart.getChart('chartLine');
+    if (!chart) return;
+    var items = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+    if (!items.length) return;
+    var line = lineLabels[items[0].index];
+    if (!line) return;
+    window.location.href = '/issues/analytics/' + encodeURIComponent(modelName) + '/' + modeName + '/' + pointName + '/line/' + encodeURIComponent(line) + '/';
+};
+</script>
 {% endblock %}

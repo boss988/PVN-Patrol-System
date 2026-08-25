@@ -60,6 +60,15 @@
                     </select>
                 </div>
                 <div class="col-auto">
+                    <label class="form-label mb-0 small">状态Trạng thái</label>
+                    <select name="issue_status" class="form-select form-select-sm">
+                        <option value="">全部Tất cả</option>
+                        <option value="Open" {% if issue_status == 'Open' %}selected{% endif %}>Open</option>
+                        <option value="Ongoing" {% if issue_status == 'Ongoing' %}selected{% endif %}>Ongoing</option>
+                        <option value="Closed" {% if issue_status == 'Closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </div>
+                <div class="col-auto">
                     <label class="form-label mb-0 small">关键词Từ khóa</label>
                     <input type="text" name="keyword" class="form-control form-control-sm" value="{{ keyword }}"
                            placeholder="现象/原因" style="width:120px;">
@@ -98,6 +107,8 @@
                     <th style="min-width:140px;">原因(5Why)Nguyên nhân</th>
                     <th style="min-width:100px;">改善方式Cách xử lý</th>
                     <th style="width:100px;">主管Chủ quản</th>
+                    <th style="width:80px;">处理人Người xử lý</th>
+                    <th style="width:70px;">状态Trạng thái</th>
                     <th style="width:50px;">严重度</th>
                     <th style="width:70px;">照片Ảnh</th>
                     <th style="width:60px;">操作</th>
@@ -105,8 +116,6 @@
                 </thead>
                 <tbody>
                 {% for issue in issues %}
-
-                 <!-- =改数据行高度要再高就把 56 改成 72 -->
                 <tr style="height:56px;">
                     <td><input type="checkbox" class="row-check" value="{{ issue.id }}"></td>
                     <td>{{ issue.occur_date|date:"Y-m-d" }}</td>
@@ -118,6 +127,16 @@
                     <td class="text-start small">{{ issue.spare_field_1|default:"-"|truncatechars:40 }}</td>
                     <td class="text-start">{{ issue.root_cause|default:"-"|truncatechars:25 }}</td>
                     <td class="small">{{ issue.supervisor|default:"-" }}</td>
+                    <td class="small">{{ issue.spare_field_2|default:"-" }}</td>
+                    <td>
+                        {% if issue.spare_field_3 == 'Closed' %}
+                        <span class="badge bg-success">Closed</span>
+                        {% elif issue.spare_field_3 == 'Ongoing' %}
+                        <span class="badge bg-warning text-dark">Ongoing</span>
+                        {% else %}
+                        <span class="badge bg-danger">Open</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if issue.severity == 3 %}<span class="badge bg-danger">高</span>
                         {% elif issue.severity == 1 %}<span class="badge bg-secondary">低</span>
@@ -149,7 +168,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="13" class="text-muted py-4">暂无数据Không có dữ liệu</td>
+                    <td colspan="15" class="text-muted py-4">暂无数据Không có dữ liệu</td>
                 </tr>
                 {% endfor %}
                 </tbody>

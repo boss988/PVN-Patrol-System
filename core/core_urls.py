@@ -10,6 +10,7 @@ from .core_views import (
     equipment_import,
     equipment_ai_predict,
     ai_assistant_parse,#测试AI用
+    equipment_update_position,#设备position
 )
 
 app_name = 'core'
@@ -23,6 +24,7 @@ urlpatterns = [
 
     # 下面这两行是修改和删除的正确路径（只保留一次）
     path('edit/<int:pk>/', equipment_edit, name='equipment_edit'),
+    path('edit/<int:pk>/position/', equipment_update_position, name='equipment_update_position'),
     path('delete/<int:pk>/', equipment_delete, name='equipment_delete'),
     path('equipments/import/', equipment_import, name='equipment_import'),
     # 新增：龙虾AI预测

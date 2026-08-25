@@ -359,6 +359,7 @@ def global_issues_list(request):
     supervisor = request.GET.get('supervisor', '').strip()
     severity = request.GET.get('severity', '').strip()
     keyword = request.GET.get('keyword', '').strip()
+    issue_status = request.GET.get('issue_status', '').strip()
     sort = request.GET.get('sort', '').strip()  # time_desc / time_asc
 
     issues = EquipmentIssue.objects.select_related(
@@ -379,6 +380,8 @@ def global_issues_list(request):
         issues = issues.filter(severity=severity)
     if keyword:
         issues = issues.filter(desc__icontains=keyword)
+    if issue_status:
+        issues = issues.filter(spare_field_3=issue_status)
 
     # 排序：默认按日期倒序；可按异常时间
     if sort == 'time_asc':
@@ -413,6 +416,7 @@ def global_issues_list(request):
         'selected_supervisor': supervisor,
         'selected_severity': severity,
         'keyword': keyword,
+        'issue_status': issue_status,
         'sort': sort,
     }
     return render(request, 'issues/global_issues_list.html', context)
@@ -475,6 +479,8 @@ def issue_create(request, equipment_pk=None):
         root_cause = request.POST.get('root_cause', '').strip()
         category_id = request.POST.get('category', '').strip()  # 问题类别（硬件/软件）
         supervisor = request.POST.get('supervisor', '').strip()
+        handler = request.POST.get('spare_field_2', '').strip()# 处理人
+        issue_status = request.POST.get('spare_field_3', 'Open').strip() or 'Open'# 状态
 
         if not desc or not occur_date:
             messages.error(request, '异常现象和发生日期为必填！')
@@ -547,6 +553,8 @@ def issue_create(request, equipment_pk=None):
             category_id=category_id if category_id else None,
             risk_id=risk_id,
             supervisor=supervisor,
+            spare_field_2=handler,
+            spare_field_3=issue_status,
         )
 
         photos = request.FILES.getlist('photos')
@@ -890,6 +898,8 @@ def issue_edit(request, pk):
             issue.severity = 2
         issue.root_cause = request.POST.get('root_cause', '').strip()
         issue.supervisor = request.POST.get('supervisor', '').strip()
+        issue.spare_field_2 = request.POST.get('spare_field_2', '').strip()
+        issue.spare_field_3 = request.POST.get('spare_field_3', 'Open').strip() or 'Open'
         cat_id = request.POST.get('category', '').strip()
         issue.category_id = cat_id if cat_id else None
 
@@ -1155,12 +1165,11 @@ def equipment_analytics_trend(request, model):
 @login_required
 def equipment_analytics_lines(request, model, mode, point):
     """
-    线体明细页：某机种 + 某天或某周 的各线体异常时间
-    point：day 模式为 YYYY-MM-DD；week 模式为该周周一 YYYY-MM-DD
+    机种某天/某周四宫格：线体柱图 + 类别环 + 站别Pareto + 状态
     """
-    from django.utils import timezone
     from datetime import timedelta, datetime
     from collections import defaultdict
+    import json
 
     model = (model or '').strip()
     mode = (mode or '').strip()
@@ -1174,7 +1183,7 @@ def equipment_analytics_lines(request, model, mode, point):
         base = datetime.strptime(point, '%Y-%m-%d').date()
     except Exception:
         messages.error(request, '日期参数错误')
-        return redirect('issues:equipment_analytics_trend', model=model)
+        return redirect('issues:equipment_analytics')
 
     if mode == 'day':
         date_start = date_end = base
@@ -1182,41 +1191,96 @@ def equipment_analytics_lines(request, model, mode, point):
     else:
         date_start = base
         date_end = base + timedelta(days=6)
-        title_point = f'W{base.isocalendar()[1]:02d} ({date_start} ~ {date_end})'
+        title_point = 'W%02d (%s ~ %s)' % (base.isocalendar()[1], date_start, date_end)
 
     qs = EquipmentIssue.objects.filter(
         equipment__model_type__icontains=model,
         occur_date__gte=date_start,
         occur_date__lte=date_end,
-    ).select_related('equipment')
+    ).select_related('equipment', 'category')
 
-    bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    line_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    cat_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    st_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    status_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    total_minutes = 0
+    total_count = 0
+
     for issue in qs:
+        mins = issue.abnormal_work_time or 0
+        total_minutes += mins
+        total_count += 1
+
         line_name = (issue.equipment.line or '未填线体').strip() or '未填线体'
-        bucket[line_name]['minutes'] += issue.abnormal_work_time or 0
-        bucket[line_name]['count'] += 1
+        line_bucket[line_name]['minutes'] += mins
+        line_bucket[line_name]['count'] += 1
+
+        cat_name = issue.category.name if issue.category else '未分类Chưa phân loại'
+        cat_bucket[cat_name]['minutes'] += mins
+        cat_bucket[cat_name]['count'] += 1
+
+        st = (issue.equipment.station or '未填站别').strip() or '未填站别'
+        st_bucket[st]['minutes'] += mins
+        st_bucket[st]['count'] += 1
+
+        stt = (issue.spare_field_3 or 'Open').strip() or 'Open'
+        status_bucket[stt]['minutes'] += mins
+        status_bucket[stt]['count'] += 1
 
     line_details = [
         {'line': k, 'minutes': v['minutes'], 'count': v['count']}
-        for k, v in sorted(bucket.items(), key=lambda x: -x[1]['minutes'])
+        for k, v in sorted(line_bucket.items(), key=lambda x: -x[1]['minutes'])
     ]
+    category_details = [
+        {'name': k, 'minutes': v['minutes'], 'count': v['count']}
+        for k, v in sorted(cat_bucket.items(), key=lambda x: -x[1]['minutes'])
+    ]
+    station_details = [
+        {'station': k, 'minutes': v['minutes'], 'count': v['count']}
+        for k, v in sorted(st_bucket.items(), key=lambda x: -x[1]['minutes'])[:10]
+    ]
+    status_order = ['Open', 'Ongoing', 'Closed']
+    status_details = []
+    for name in status_order:
+        if name in status_bucket:
+            status_details.append({
+                'name': name,
+                'minutes': status_bucket[name]['minutes'],
+                'count': status_bucket[name]['count'],
+            })
+    for name, v in status_bucket.items():
+        if name not in status_order:
+            status_details.append({'name': name, 'minutes': v['minutes'], 'count': v['count']})
 
     return render(request, 'issues/equipment_analytics_lines.html', {
         'model': model,
         'mode': mode,
         'point': point,
         'title_point': title_point,
+        'total_minutes': total_minutes,
+        'total_count': total_count,
         'line_details': line_details,
+        'line_labels_json': json.dumps([x['line'] for x in line_details], ensure_ascii=False),
+        'line_values_json': json.dumps([x['minutes'] for x in line_details]),
+        'cat_labels_json': json.dumps([x['name'] for x in category_details], ensure_ascii=False),
+        'cat_values_json': json.dumps([x['minutes'] for x in category_details]),
+        'st_labels_json': json.dumps([x['station'] for x in station_details], ensure_ascii=False),
+        'st_values_json': json.dumps([x['minutes'] for x in station_details]),
+        'status_labels_json': json.dumps([x['name'] for x in status_details], ensure_ascii=False),
+        'status_values_json': json.dumps([x['minutes'] for x in status_details]),
+        'status_details': status_details,
+        'station_details': station_details,
     })
 
 
 @login_required
 def equipment_analytics_stations(request, model, mode, point, line):
     """
-    站别明细页：某机种 + 某天/某周 + 某线体 → 各站异常时间 + 类别汇总
+    某机种 + 某天/周 + 某线体 四宫格：站别 + 类别 + 状态 + 记录
     """
     from datetime import datetime, timedelta
     from collections import defaultdict
+    import json
 
     model = (model or '').strip()
     mode = (mode or '').strip()
@@ -1231,7 +1295,7 @@ def equipment_analytics_stations(request, model, mode, point, line):
         base = datetime.strptime(point, '%Y-%m-%d').date()
     except Exception:
         messages.error(request, '日期参数错误')
-        return redirect('issues:equipment_analytics_trend', model=model)
+        return redirect('issues:equipment_analytics_lines', model=model, mode=mode, point=point)
 
     if mode == 'day':
         date_start = date_end = base
@@ -1239,28 +1303,37 @@ def equipment_analytics_stations(request, model, mode, point, line):
     else:
         date_start = base
         date_end = base + timedelta(days=6)
-        title_point = f'W{base.isocalendar()[1]:02d} ({date_start} ~ {date_end})'
+        title_point = 'W%02d (%s ~ %s)' % (base.isocalendar()[1], date_start, date_end)
 
     qs = EquipmentIssue.objects.filter(
         equipment__model_type__icontains=model,
         equipment__line=line,
         occur_date__gte=date_start,
         occur_date__lte=date_end,
-    ).select_related('equipment', 'category')
+    ).select_related('equipment', 'category').order_by('-abnormal_work_time', '-occur_date')
 
-    # 按站别汇总
     station_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
-    # 按类别汇总（做小饼图用）
     category_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    status_bucket = defaultdict(lambda: {'minutes': 0, 'count': 0})
+    total_minutes = 0
+    total_count = 0
 
     for issue in qs:
+        mins = issue.abnormal_work_time or 0
+        total_minutes += mins
+        total_count += 1
+
         st = (issue.equipment.station or '未填站别').strip() or '未填站别'
-        station_bucket[st]['minutes'] += issue.abnormal_work_time or 0
+        station_bucket[st]['minutes'] += mins
         station_bucket[st]['count'] += 1
 
-        cat_name = issue.category.name if issue.category else '未分类'
-        category_bucket[cat_name]['minutes'] += issue.abnormal_work_time or 0
+        cat_name = issue.category.name if issue.category else '未分类Chưa phân loại'
+        category_bucket[cat_name]['minutes'] += mins
         category_bucket[cat_name]['count'] += 1
+
+        stt = (issue.spare_field_3 or 'Open').strip() or 'Open'
+        status_bucket[stt]['minutes'] += mins
+        status_bucket[stt]['count'] += 1
 
     station_details = [
         {'station': k, 'minutes': v['minutes'], 'count': v['count']}
@@ -1270,6 +1343,20 @@ def equipment_analytics_stations(request, model, mode, point, line):
         {'name': k, 'minutes': v['minutes'], 'count': v['count']}
         for k, v in sorted(category_bucket.items(), key=lambda x: -x[1]['minutes'])
     ]
+    status_order = ['Open', 'Ongoing', 'Closed']
+    status_details = []
+    for name in status_order:
+        if name in status_bucket:
+            status_details.append({
+                'name': name,
+                'minutes': status_bucket[name]['minutes'],
+                'count': status_bucket[name]['count'],
+            })
+    for name, v in status_bucket.items():
+        if name not in status_order:
+            status_details.append({'name': name, 'minutes': v['minutes'], 'count': v['count']})
+
+    record_list = list(qs[:20])
 
     return render(request, 'issues/equipment_analytics_stations.html', {
         'model': model,
@@ -1277,6 +1364,16 @@ def equipment_analytics_stations(request, model, mode, point, line):
         'point': point,
         'line': line,
         'title_point': title_point,
+        'total_minutes': total_minutes,
+        'total_count': total_count,
         'station_details': station_details,
         'category_details': category_details,
+        'status_details': status_details,
+        'record_list': record_list,
+        'st_labels_json': json.dumps([x['station'] for x in station_details], ensure_ascii=False),
+        'st_values_json': json.dumps([x['minutes'] for x in station_details]),
+        'cat_labels_json': json.dumps([x['name'] for x in category_details], ensure_ascii=False),
+        'cat_values_json': json.dumps([x['minutes'] for x in category_details]),
+        'status_labels_json': json.dumps([x['name'] for x in status_details], ensure_ascii=False),
+        'status_values_json': json.dumps([x['minutes'] for x in status_details]),
     })
