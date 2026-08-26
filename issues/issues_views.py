@@ -58,13 +58,15 @@ MARQUEE_NOTICE_USERS = [
     # 以后要加账号，直接写在这里
 ]
 
-# 设备异常：可编辑/删除的白名单（以后要加账号写这里）
-EQUIPMENT_ISSUE_EDIT_USERS = [
+# 设备异常：可删除的白名单（以后要加账号写这里）
+EQUIPMENT_ISSUE_DELETE_USERS = [
     'perry_chen',
     's20038978',
     'V25020512',
     'V25018772',
 ]
+# 兼容旧代码，避免报 NameError
+EQUIPMENT_ISSUE_EDIT_USERS = EQUIPMENT_ISSUE_DELETE_USERS
 
 
 
@@ -862,24 +864,91 @@ def marquee_content_api(request):
 # ==================== 设备异常：详情 / 编辑 / 删除 ====================
 @login_required
 def issue_detail(request, pk):
-    """设备异常详情"""
+    """
+    设备异常详情（主管检讨页）
+    本条信息 + 设备图/异常图 + 近8周记录 + 近8周折线
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from collections import defaultdict
+    import json
+
     issue = get_object_or_404(
         EquipmentIssue.objects.select_related('equipment', 'category'),
         pk=pk
     )
-    can_edit = request.user.username in EQUIPMENT_ISSUE_EDIT_USERS
+
+    # 同一台设备，近8周
+    eight_weeks_ago = timezone.now().date() - timedelta(days=56)
+    history_list = list(
+        EquipmentIssue.objects.filter(
+            equipment=issue.equipment,
+            occur_date__gte=eight_weeks_ago,
+        ).select_related('equipment', 'category').order_by('-occur_date', '-id')
+    )
+
+    history_count = len(history_list)
+    history_minutes = 0
+    history_open = 0
+    for row in history_list:
+        history_minutes += row.abnormal_work_time or 0
+        st = (row.spare_field_3 or 'Open').strip() or 'Open'
+        if st != 'Closed':
+            history_open += 1
+
+    # 近8个自然周（周一到周日）异常分钟
+    today = timezone.now().date()
+    this_monday = today - timedelta(days=today.weekday())
+    week_starts = []
+    i = 7
+    while i >= 0:
+        week_starts.append(this_monday - timedelta(days=7 * i))
+        i -= 1
+
+    week_map = defaultdict(int)
+    for row in history_list:
+        if not row.occur_date:
+            continue
+        monday = row.occur_date - timedelta(days=row.occur_date.weekday())
+        week_map[monday] += row.abnormal_work_time or 0
+
+    week_labels = []
+    week_values = []
+    for ws in week_starts:
+        week_labels.append('W%02d' % ws.isocalendar()[1])
+        week_values.append(week_map.get(ws, 0))
+
+    # 登录就能编辑；删除看白名单
+    can_edit = True
+    delete_users = []
+    try:
+        delete_users = EQUIPMENT_ISSUE_DELETE_USERS
+    except NameError:
+        try:
+            delete_users = EQUIPMENT_ISSUE_EDIT_USERS
+        except NameError:
+            delete_users = []
+    can_delete = request.user.username.lower() in [x.lower() for x in delete_users]
+
     return render(request, 'issues/issue_detail.html', {
         'issue': issue,
         'can_edit': can_edit,
+        'can_delete': can_delete,
+        'history_list': history_list,
+        'history_count': history_count,
+        'history_minutes': history_minutes,
+        'history_open': history_open,
+        'week_labels_json': json.dumps(week_labels, ensure_ascii=False),
+        'week_values_json': json.dumps(week_values),
     })
 
 
 @login_required
 def issue_edit(request, pk):
-    """编辑设备异常（白名单）"""
-    if request.user.username not in EQUIPMENT_ISSUE_EDIT_USERS:
-        messages.error(request, '你没有权限编辑！')
-        return redirect('issues:global_issues_list')
+    # """编辑设备异常（白名单）"""
+    # if request.user.username not in EQUIPMENT_ISSUE_EDIT_USERS:
+    #     messages.error(request, '你没有权限编辑！')
+    #     return redirect('issues:global_issues_list')
 
     issue = get_object_or_404(EquipmentIssue, pk=pk)
     categories = EquipmentIssueCategory.objects.filter(is_active=True).order_by('order')

@@ -3,7 +3,21 @@ from django.contrib.auth.models import Group
 from .core_models import Equipment
 
 # 注册模型
-admin.site.register(Equipment)
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    """
+    后台批量管理设备：勾选后可删除
+    删除设备时，该设备下的异常记录也会一起删掉
+    """
+    list_display = ('code', 'name', 'model_type', 'area', 'line', 'station', 'status')
+    list_filter = ('area', 'model_type', 'line', 'status')
+    search_fields = ('code', 'name', 'rfid_card', 'station', 'line')
+    list_per_page = 50
+    ordering = ('area', 'model_type', 'line', 'position', 'station')
+
+    def has_delete_permission(self, request, obj=None):
+        # 只让超级管理员批量删，避免普通后台账号误删
+        return request.user.is_superuser
 
 from django.contrib import admin
 from django.contrib.auth.models import User, Group
@@ -40,8 +54,8 @@ class CustomUserAdmin(BaseUserAdmin):
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
 
-# 注册 Group（可选）
-admin.site.register(Group)
+# Group 系统已注册，不要再 register
+# admin.site.register(Group)
 
 # 单独注册 UserProfile（方便查看）
 @admin.register(UserProfile)

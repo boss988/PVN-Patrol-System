@@ -9,6 +9,17 @@ from django.utils import timezone
 from .core_models import Equipment, AlarmRecord
 
 
+def normalize_area(area):
+    """
+    厂别自动纠正：去掉空格，英文字母改大写
+    例：F4 4f / F4 4F / f44f → F44F
+    """
+    raw = (area or '').strip()
+    if not raw or raw.lower() == 'nan':
+        return ''
+    return ''.join(ch for ch in raw.upper() if ch.isalnum())
+
+
 class EquipmentForm(forms.ModelForm):
     class Meta:
         model = Equipment
@@ -16,9 +27,6 @@ class EquipmentForm(forms.ModelForm):
         widgets = {
             'install_date': forms.DateInput(attrs={'class': 'dateinput form-control'}),  # 加 class 触发 datepicker
         }
-
-
-
 
 
 @login_required
@@ -63,7 +71,7 @@ def equipment_create(request):
         station = request.POST.get('station', '').strip()
         line = request.POST.get('line', '').strip()
         model_type = request.POST.get('model_type', '').strip()
-        area = request.POST.get('area', '')
+        area = normalize_area(request.POST.get('area', ''))
         category = request.POST.get('category', '').strip()  # 设备/治具类别
         eq_type = request.POST.get('eq_type', '')
 
@@ -150,6 +158,7 @@ def dashboard(request):
 
     })
 
+
 @login_required
 def equipment_update_position(request, pk):
     """
@@ -170,6 +179,7 @@ def equipment_update_position(request, pk):
     equipment.position = pos
     equipment.save(update_fields=['position'])
     return JsonResponse({'ok': True, 'position': pos})
+
 
 @login_required
 def equipment_edit(request, pk):
@@ -204,7 +214,7 @@ def equipment_edit(request, pk):
         station = request.POST.get('station', '').strip()
         line = request.POST.get('line', '').strip()
         rfid_card = request.POST.get('rfid_card', '').strip()
-        area = request.POST.get('area', '').strip()
+        area = normalize_area(request.POST.get('area', ''))
         category = request.POST.get('category', '').strip()
         eq_type = request.POST.get('eq_type', '').strip()
         model_type = request.POST.get('model_type', '').strip()
@@ -246,6 +256,7 @@ def equipment_edit(request, pk):
         return redirect('core:equipment_list')
     return render(request, 'core/equipment_edit.html', context)
 
+
 @login_required
 def equipment_delete(request, pk):
     """删除设备 - 加强权限控制 + 立即弹窗提示"""
@@ -276,8 +287,6 @@ def equipment_delete(request, pk):
         messages.error(request, f'❌ 删除失败：{str(e)}')
 
     return redirect('core:equipment_list')
-
-
 
 
 @login_required
@@ -403,6 +412,7 @@ def equipment_list(request):
 
     })
 
+
 @login_required
 def equipment_import(request):
     """
@@ -410,6 +420,8 @@ def equipment_import(request):
     - 工作表1，表头固定列名
     - code 唯一
     - 线别必须在产线配置表中，否则跳过（卡关）
+    - 机种按配置表标准名纠正（Arias → ARIAS），对不上则跳过
+    - 厂别自动去空格并转大写（F4 4f → F44F）
     """
     from django.contrib import messages
     from django.conf import settings
@@ -458,6 +470,14 @@ def equipment_import(request):
                 messages.error(request, '❌ 产线配置表没有启用的线别，请先在后台配置！')
                 return redirect('core:equipment_list')
 
+            # ---------- 机种白名单：Excel大小写不同也改成配置表标准名 ----------
+            official_models = {}
+            for name in ProductionLineConfig.objects.filter(is_active=True).values_list('model_type', flat=True):
+                n = str(name).strip()
+                if n:
+                    official_models[n.lower()] = n
+            log.append('📋 允许的机种（配置表）：' + str(sorted(set(official_models.values()))))
+
             for idx, row in df.iterrows():
                 row_num = idx + 2
                 raw_code = str(row.get('90流水號', '')).strip()
@@ -482,14 +502,26 @@ def equipment_import(request):
                     skip_count += 1
                     continue
 
-                # 3. 组装并创建
+                # 3. 机种必须能对上配置表（Arias → ARIAS）
+                mt_raw = str(row.get('機種', '')).strip()
+                if mt_raw.lower() == 'nan':
+                    mt_raw = ''
+                mt_std = official_models.get(mt_raw.lower(), '')
+                if not mt_std:
+                    log.append(
+                        '行 %s：❌ code=%s 机种[%s]不在配置表，跳过' % (row_num, raw_code, mt_raw)
+                    )
+                    skip_count += 1
+                    continue
+
+                # 4. 组装并创建
                 equipment_data = {
                     'code': raw_code,
                     'name': str(row.get('名稱', '')).strip() or '未命名设备',
                     'category': str(row.get('類別', '')).strip(),
-                    'model_type': str(row.get('機種', '')).strip(),
+                    'model_type': mt_std,
                     'line': line_val,
-                    'area': str(row.get('區域', '')).strip(),
+                    'area': normalize_area(str(row.get('區域', ''))),
                     'station': str(row.get('站別', '')).strip(),
                     'eq_type': str(row.get('类型', '')).strip(),
                     'install_date': date.today(),
@@ -504,7 +536,7 @@ def equipment_import(request):
                 try:
                     Equipment.objects.create(**equipment_data)
                     success_count += 1
-                    log.append(f"行 {row_num}：✅ code={raw_code} 线别={line_val} 导入成功")
+                    log.append(f"行 {row_num}：✅ code={raw_code} 机种={mt_std} 线别={line_val} 导入成功")
                 except Exception as e:
                     error_count += 1
                     log.append(f"行 {row_num}：❌ 导入失败 {str(e)}")
@@ -527,6 +559,7 @@ def equipment_import(request):
 
     return render(request, 'core/equipment_import.html', {'log': None})
 
+
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 import subprocess
@@ -540,6 +573,7 @@ from django.http import JsonResponse
 
 # 全局变量存储进度（简单实现）
 PREDICT_PROGRESS = {}
+
 
 @login_required
 def equipment_ai_predict(request, pk):
